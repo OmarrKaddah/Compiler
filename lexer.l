@@ -2,7 +2,7 @@
 %{
     #include <stdio.h>
     #include <stdlib.h>
-
+    #include <string.h>
     #include "parser.tab.h"
 %}
 
@@ -12,6 +12,8 @@
 #[^#]*#                                         { /* Ignore comments */ }
 ([1-9][0-9]*|0)                                 {yylval.i = atoi(yytext); return INT;}
 ([1-9][0-9]*|0)\.[0-9]+                         {yylval.f = atof(yytext); return FLOAT; }
+"false"                                         { yylval.i = 0; return BOOL; }
+"true"                                          { yylval.i = 1; return BOOL; }
 \"([^\"]|\\.)*\"                                {
                                                     char *content = strdup(yytext + 1);
                                                     content[strlen(content) - 1] = '\0';//ghayarna " lee \0
@@ -40,17 +42,46 @@
                                                     yylval.s = decoded;
                                                     return STRING;
                                                 }
-[()]                                            {return yytext[0];}
--                                               {return MINUS;}
-+                                               {return PLUS;}
-*                                               {return MULTIPLY;}
-/                                               {return DIVIDE;}
-&&                                              {return AND;}
-||                                              {return OR;}
-!                                               {return NOT;}
-=                                               {return EQUAL;}
-==                                              {return EQUAL_EQUAL;}
-!=                                              {return NOT_EQUAL;}
+                                                
+//brackets
+"("                                             { return L_PAREN; }    
+")"                                             { return R_PAREN; }
+"["                                             { return L_BRACKET; }  
+"]"                                             { return R_BRACKET; }
+
+//operators
+"-"                                             {return MINUS;}
+"+"                                             {return PLUS;}
+"*"                                             {return MULTIPLY;}
+"/"                                             {return DIVIDE;}
+"&&"                                            {return AND;}
+"||"                                            {return OR;}
+"!"                                             {return NOT;}
+"="                                             {return EQUAL;}
+"=="                                            {return EQUAL_EQUAL;}
+"!="                                            {return NOT_EQUAL;}
+"<"                                             { return LESS; }
+"<="                                            { return LESS_EQUAL; }
+">"                                             { return GREATER; }
+">="                                            { return GREATER_EQUAL; }
+
+//bitwise operators
+"&"                                             { return BIT_AND; }
+"|"                                             { return BIT_OR; }
+"^"                                             { return BIT_XOR; }
+"~"                                             { return BIT_NOT; }
+
+//other operators
+"+="                                            { return PLUS_EQUAL; }
+"-="                                            { return MINUS_EQUAL; }
+"*="                                            { return TIMES_EQUAL; }
+"/="                                            { return DIVIDE_EQUAL; }
+"++"                                            { return INCR; }
+";"                                             { return SEMI; }
+":"                                             { return COLON; }
+"."                                             { return DOT; }
+
+//conditions
 "law"                                           {return IF;}//if
 "aw"                                            {return ELSE;}//else
 "madam"                                         {return WHILE;}//while
@@ -69,14 +100,8 @@
 "kalam"                                         {return STRING;}//string
 "bool"                                          {return BOOL;}//bool
 
-
-
-
-
-
-""
-
-[ \t\n]+    { /* Ignore whitespace */ }
+[a-zA-Z_][a-zA-Z0-9_]*                          { yylval.s = strdup(yytext); return IDENTIFIER; }
+[ \t\n]+                                        { /* Ignore whitespace */ }
 %%
 
 /* Subroutines */

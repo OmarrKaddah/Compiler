@@ -1,57 +1,113 @@
-/* Definitions */
 %{
     #include <stdio.h>
     #include <stdlib.h>
+
+    extern int yylex();
     void yyerror(const char* s);
-    int yylex(void);
-    extern FILE* yyin;
 %}
 
-%union {
-    int i;
-}
-%token MINUS
-%token <i> INTEGER
-%type <i> S E T F
+/* Tokens */
+%token MINUS PLUS MULTIPLY DIVIDE
+%token AND OR NOT
+%token EQUAL EQUAL_EQUAL NOT_EQUAL
+%token IF ELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT
+%token INT FLOAT CHAR STRING BOOL
 
-/* Production Rules */
+/* Grammar Rules */
 %%
-S : E           { printf("Result: %d\n", $1); }
-  ;
+program:
+    program statement
+    | /* empty */
+    ;
 
-E : E '+' T     {$$ = $1 + $3; }
-  | E MINUS T   {$$ = $1 - $3; }
-  | T           {$$ = $1; }
-  ;
+statement:
+    expression ';'
+    | if_statement
+    | while_statement
+    | do_while_statement
+    | for_statement
+    | switch_statement
+    | declaration_statement
+    | return_statement
+    | break_statement
+    | continue_statement
+    | print_statement
+    ;
 
-T : T '*' F     {$$ = $1 * $3; }
-  | T '/' F     {if ($3 == 0) { yyerror("Division by zero!"); } else { $$ = $1 / $3; }}
-  | F           {$$ = $1; }
-  ;
+if_statement:
+    IF '(' expression ')' statement
+    | IF '(' expression ')' statement ELSE statement
+    ;
 
-F : '(' E ')'   {$$ = $2; }
-  | MINUS F     {$$ = -$2; }
-  | INTEGER     {$$ = $1; }
+while_statement:
+    WHILE '(' expression ')' statement
+    ;
+
+do_while_statement:
+    DO statement WHILE '(' expression ')' ';'
+    ;
+
+for_statement:
+    FOR '(' expression ';' expression ';' expression ')' statement
+    ;
+
+switch_statement:
+    SWITCH '(' expression ')' '{' case_list '}'
+    ;
+
+case_list:
+    case_list case_statement
+    | /* empty */
+    ;
+
+case_statement:
+    CASE INT ':' statement
+    ;
+
+declaration_statement:
+    type_specifier expression ';'
+    ;
+
+type_specifier:
+    INT
+    | FLOAT
+    | CHAR
+    | STRING
+    | BOOL
+    ;
+
+return_statement:
+    RETURN expression ';'
+    ;
+
+break_statement:
+    BREAK ';'
+    ;
+
+continue_statement:
+    CONTINUE ';'
+    ;
+
+print_statement:
+    PRINT '(' expression ')' ';'
+    ;
+
+expression:
+    expression PLUS expression
+    | expression MINUS expression
+    | expression MULTIPLY expression
+    | expression DIVIDE expression
+    | expression AND expression
+    | expression OR expression
+    | expression EQUAL_EQUAL expression
+    | expression NOT_EQUAL expression
+    | NOT expression
+    | '(' expression ')'
+    | INT
+    ;
 %%
 
 /* Subroutines */
 void yyerror(const char* s) {
     fprintf(stderr, "Error: %s\n", s);
-    exit(1);
-}
-
-int main(int argc, char** argv) {
-    if (argc > 1) {
-        yyin = fopen(argv[1], "r");
-        if (!yyin) {
-            fprintf(stderr, "Error opening file: %s\n", argv[1]);
-            return 1;
-        }
-    } else {
-        yyin = stdin;
-    }
-
-    yyparse();
-    fclose(yyin);
-    return 0;
 }

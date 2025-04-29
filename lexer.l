@@ -8,7 +8,7 @@
 
 /* Regex Rules */
 %%
-[0-9]+                   {yylval.i = atoi(yytext); return RAKAM;}
+[0-9]+                   {yylval.i = atoi(yytext); return INT;}
 [()]                     {return yytext[0];}
 -                        {return MINUS;}
 +                        {return PLUS;}

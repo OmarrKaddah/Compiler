@@ -6,14 +6,40 @@
     void yyerror(const char* s);
 %}
 
-/* Tokens */
+/* Token Types */
+%union {
+    int i;
+    float f;
+    char* s;
+}
+
+/* Token declarations */
+%token <i> INT BOOL
+%token <f> FLOAT
+%token <s> STRING IDENTIFIER
 %token MINUS PLUS MULTIPLY DIVIDE
 %token AND OR NOT
 %token EQUAL EQUAL_EQUAL NOT_EQUAL
+%token LESS LESS_EQUAL GREATER GREATER_EQUAL
+%token BIT_AND BIT_OR BIT_XOR BIT_NOT
+%token PLUS_EQUAL MINUS_EQUAL TIMES_EQUAL DIVIDE_EQUAL
+%token INCR
 %token IF ELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT
-%token INT FLOAT CHAR STRING BOOL
+%token INT_TYPE FLOAT_TYPE STRING_TYPE BOOL_TYPE
 
-/* Grammar Rules */
+/* Operator precedence */
+%left OR
+%left AND
+%left BIT_OR
+%left BIT_XOR
+%left BIT_AND
+%left EQUAL_EQUAL NOT_EQUAL
+%left LESS LESS_EQUAL GREATER GREATER_EQUAL
+%left PLUS MINUS
+%left MULTIPLY DIVIDE
+%right NOT BIT_NOT
+%right INCR
+
 %%
 program:
     program statement
@@ -71,7 +97,6 @@ declaration_statement:
 type_specifier:
     INT
     | FLOAT
-    | CHAR
     | STRING
     | BOOL
     ;

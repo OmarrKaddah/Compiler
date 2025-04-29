@@ -44,10 +44,12 @@
                                                 }
                                                 
 //brackets
-"("                                             { return L_PAREN; }    
-")"                                             { return R_PAREN; }
-"["                                             { return L_BRACKET; }  
-"]"                                             { return R_BRACKET; }
+"("                                             { return "("; }    
+")"                                             { return ")"; }
+"["                                             { return "["; }  
+"]"                                             { return "]"; }
+"{"                                             { return "{"; }    
+"}"                                             { return "}"; }
 
 //operators
 "-"                                             {return MINUS;}
@@ -77,9 +79,9 @@
 "*="                                            { return TIMES_EQUAL; }
 "/="                                            { return DIVIDE_EQUAL; }
 "++"                                            { return INCR; }
-";"                                             { return SEMI; }
-":"                                             { return COLON; }
-"."                                             { return DOT; }
+";"                                             { return ";"; }
+":"                                             { return ":"; }//??
+"."                                             { return "."; }//??
 
 //conditions
 "law"                                           {return IF;}//if

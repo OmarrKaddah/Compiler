@@ -42,14 +42,19 @@
                                                     yylval.s = decoded;
                                                     return STRING;
                                                 }
+//types
+"rakam"                                         {return INT_TYPE;}
+"kasr"                                          {return FLOAT_TYPE;}
+"kalam"                                         {return STRING_TYPE;}
+"bool"                                          {return BOOL_TYPE;}
                                                 
 //brackets
-"("                                             { return "("; }    
-")"                                             { return ")"; }
-"["                                             { return "["; }  
-"]"                                             { return "]"; }
-"{"                                             { return "{"; }    
-"}"                                             { return "}"; }
+"("                                             { return '('; }    
+")"                                             { return ')'; }
+"["                                             { return '['; }  
+"]"                                             { return ']'; }
+"{"                                             { return '{'; }    
+"}"                                             { return '}'; }
 
 //operators
 "-"                                             {return MINUS;}
@@ -79,9 +84,9 @@
 "*="                                            { return TIMES_EQUAL; }
 "/="                                            { return DIVIDE_EQUAL; }
 "++"                                            { return INCR; }
-";"                                             { return ";"; }
-":"                                             { return ":"; }//??
-"."                                             { return "."; }//??
+";"                                             { return ';'; }
+":"                                             { return ':'; }
+"."                                             { return '.'; }
 
 //conditions
 "law"                                           {return IF;}//if
@@ -96,11 +101,6 @@
 "kamel"                                         {return CONTINUE;}//continue
 "raga3"                                         {return RETURN;}//return
 "etba3"                                         {return PRINT;}//print
-"rakam"                                         {return INT;}//int
-"kasr"                                          {return FLOAT;}//float
-"7arf"                                          {return CHAR;}//char
-"kalam"                                         {return STRING;}//string
-"bool"                                          {return BOOL;}//bool
 
 [a-zA-Z_][a-zA-Z0-9_]*                          { yylval.s = strdup(yytext); return IDENTIFIER; }
 [ \t\n]+                                        { /* Ignore whitespace */ }

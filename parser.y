@@ -1,12 +1,14 @@
 %{
     #include <stdio.h>
     #include <stdlib.h>
+    #include <string.h>
 
     extern int yylex();
     void yyerror(const char* s);
+    int yyparse();
 %}
 
-/* Token Types */
+/* Value type union */
 %union {
     int i;
     float f;
@@ -24,7 +26,7 @@
 %token BIT_AND BIT_OR BIT_XOR BIT_NOT
 %token PLUS_EQUAL MINUS_EQUAL TIMES_EQUAL DIVIDE_EQUAL
 %token INCR
-%token IF ELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT
+%token IF ELSE WHILE DO_WHILE FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT
 %token INT_TYPE FLOAT_TYPE STRING_TYPE BOOL_TYPE
 
 /* Operator precedence */
@@ -41,23 +43,34 @@
 %right INCR
 
 %%
+
 program:
-    program statement
-    | /* empty */
+    /* empty */
+    | program statement
     ;
 
 statement:
     expression ';'
+    | declaration ';'
     | if_statement
     | while_statement
     | do_while_statement
     | for_statement
     | switch_statement
-    | declaration_statement
     | return_statement
     | break_statement
     | continue_statement
     | print_statement
+    | block_statement
+    ;
+
+block_statement:
+    '{' statement_list '}'
+    ;
+
+statement_list:
+    /* empty */
+    | statement_list statement
     ;
 
 if_statement:
@@ -70,7 +83,7 @@ while_statement:
     ;
 
 do_while_statement:
-    DO statement WHILE '(' expression ')' ';'
+    DO_WHILE '(' expression ')' ';'
     ;
 
 for_statement:
@@ -82,27 +95,29 @@ switch_statement:
     ;
 
 case_list:
-    case_list case_statement
-    | /* empty */
+    /* empty */
+    | case_list case_statement
     ;
 
 case_statement:
-    CASE INT ':' statement
+    CASE expression ':' statement
     ;
 
-declaration_statement:
-    type_specifier expression ';'
+declaration:
+    type_specifier IDENTIFIER
+    | type_specifier IDENTIFIER EQUAL expression
     ;
 
 type_specifier:
-    INT
-    | FLOAT
-    | STRING
-    | BOOL
+    INT_TYPE
+    | FLOAT_TYPE
+    | STRING_TYPE
+    | BOOL_TYPE
     ;
 
 return_statement:
-    RETURN expression ';'
+    RETURN ';'
+    | RETURN expression ';'
     ;
 
 break_statement:
@@ -118,7 +133,13 @@ print_statement:
     ;
 
 expression:
-    expression PLUS expression
+    INT
+    | FLOAT
+    | STRING
+    | BOOL
+    | IDENTIFIER
+    | '(' expression ')'
+    | expression PLUS expression
     | expression MINUS expression
     | expression MULTIPLY expression
     | expression DIVIDE expression
@@ -126,13 +147,30 @@ expression:
     | expression OR expression
     | expression EQUAL_EQUAL expression
     | expression NOT_EQUAL expression
+    | expression LESS expression
+    | expression LESS_EQUAL expression
+    | expression GREATER expression
+    | expression GREATER_EQUAL expression
+    | expression BIT_AND expression
+    | expression BIT_OR expression
+    | expression BIT_XOR expression
     | NOT expression
-    | '(' expression ')'
-    | INT
+    | BIT_NOT expression
+    | expression EQUAL expression
+    | expression PLUS_EQUAL expression
+    | expression MINUS_EQUAL expression
+    | expression TIMES_EQUAL expression
+    | expression DIVIDE_EQUAL expression
+    | INCR expression
+    | expression INCR
     ;
+
 %%
 
-/* Subroutines */
 void yyerror(const char* s) {
     fprintf(stderr, "Error: %s\n", s);
+}
+
+int main() {
+    return yyparse();
 }

@@ -138,17 +138,16 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 10 "parser.y"
+#line 17 "parser.y"
 {
     int i;
     float f;
     char* s;
     int b; 
     val *v;
- 
 }
 /* Line 1529 of yacc.c.  */
-#line 152 "parser.tab.h"
+#line 151 "parser.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

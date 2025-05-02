@@ -1,7 +1,14 @@
-bool x=5+3==4+7;
 
 
+etba3(2 + 3 * 4);
 
 
+etba3((2 + 3) * 4);
 
+etba3(5 + 3 == 4 * 2); 
 
+etba3(3 < 5 == true); 
+
+etba3(true || false && false); 
+
+etba3(4 | 1 & 2);

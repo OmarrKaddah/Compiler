@@ -66,9 +66,10 @@ statement:
     | break_statement
     | continue_statement
     | print_statement
-    | block_statement
-    
+    | block_statement    
     ;
+
+
 
 assignment_statement:
     IDENTIFIER EQUAL expression ;
@@ -140,7 +141,17 @@ continue_statement:
 
 print_statement:
     PRINT '(' expression ')' ';' {
-    //  printf("PRINT: %d\n", $3);
+        if ($3->type == TYPE_INT) {
+            printf("PRINT: %d\n", $3->data.i);
+        } else if ($3->type == TYPE_FLOAT) {
+            printf("PRINT: %f\n", $3->data.f);
+        } else if ($3->type == TYPE_STRING) {
+            printf("PRINT: %s\n", $3->data.s);
+        } else if ($3->type == TYPE_BOOL) {
+            printf("PRINT: %s\n", $3->data.b ? "true" : "false");
+        } else {
+            yyerror("Unknown type in print statement");
+        }
     }
 ;
 
@@ -223,14 +234,16 @@ expression:
                                                                                         yyerror("Invalid expression: cannot perform an multiplication operation between non-numerical expressions.");
                                                                                     } }
     | expression DIVIDE expression {
-        if ($3 == 0) {
+        if ($3-> data.f== 0.0 || $3->data.i == 0) {
             yyerror("Division by zero");
+            printf("Division by zero");
             $$ = 0;
         } else {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
                                                                                         if ($1->type == TYPE_FLOAT && $3->type == TYPE_FLOAT) {
                                                                                             $$ = malloc(sizeof(val));
                                                                                             $$->type = TYPE_FLOAT;
                                                                                             $$->data.f = $1->data.f / $3->data.f;
+                                                                                            printf("PRINT : %f\n", $$->data.f);
                                                                                         }
                                                                                         else if ($1->type == TYPE_FLOAT) {
                                                                                             $$ = malloc(sizeof(val));
@@ -257,7 +270,7 @@ expression:
     | '(' expression ')' { $$ = $2; }
 
 
-    /* | expression AND expression //{ $$ = $1 && $3; }
+    | expression AND expression {}
     | expression OR expression //{ $$ = $1 || $3; }
     | expression EQUAL_EQUAL expression// { $$ = $1 == $3; }
     | expression NOT_EQUAL expression //{ $$ = $1 != $3; }
@@ -274,7 +287,7 @@ expression:
     | expression PLUS_EQUAL expression //{ $$ = $1 + $3;}
     | expression MINUS_EQUAL expression //{ $$ = $1 - $3; }
     | expression TIMES_EQUAL expression //{ $$ = $1 * $3; }
-    | expression DIVIDE_EQUAL expression   */
+    | expression DIVIDE_EQUAL expression   
     /* {
         if ($3 == 0) {
             yyerror("Division by zero in assignment");

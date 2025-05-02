@@ -9,7 +9,12 @@
 #.*                                             { /* Ignore comments */ }
 #[^#]*#                                         { /* Ignore comments */ }
 ([1-9][0-9]*|0)                                 { yylval.i = atoi(yytext); return INT; }
-([1-9][0-9]*|0)\.[0-9]+                         { yylval.f = atof(yytext); return FLOAT; }
+([1-9][0-9]*|0)\.[0-9]+                         {
+    yylval.v = malloc(sizeof(val));
+    yylval.v->type = TYPE_FLOAT;
+    yylval.v->data.f = atof(yytext);
+    return FLOAT;
+}
 "false"                                         { yylval.i = 0; return BOOL; }
 "true"                                          { yylval.i = 1; return BOOL; }
 \"([^\\\"]|\\.)*\"                              { // Fixed regex for strings

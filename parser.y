@@ -143,7 +143,7 @@ continue_statement:
 
 print_statement:
     PRINT '(' expression ')' ';' {
-    //  printf("PRINT: %d\n", $3);
+    //  //printf("PRINT: %d\n", $3);
     }
 ;
 
@@ -156,7 +156,7 @@ expression:
                                                                                             $$ = malloc(sizeof(val));
                                                                                             $$->type = TYPE_FLOAT;
                                                                                             $$->data.f = $1->data.f + $3->data.f;
-                                                                                            printf("PRINT : %f\n", $$->data.f);
+                                                                                            //printf("PRINT : %f\n", $$->data.f);
                                                                                         }
                                                                                         else if ($1->type == TYPE_FLOAT) {
                                                                                             $$ = malloc(sizeof(val));
@@ -271,24 +271,24 @@ expression:
                                                                                         switch ($1->type) {
                                                                                             case TYPE_INT:
                                                                                                 $$->data.b = ($1->data.i == $3->data.i);
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                                ////printf("PRINT : %b\n", $$->data.b);
                                                                                                 break;
                                                                                             case TYPE_FLOAT:
                                                                                                 $$->data.b = ($1->data.f == $3->data.f);
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                               // //printf("PRINT : %f\n", $$->data.b);
                                                                                                 break;
                                                                                             case TYPE_STRING:
                                                                                                 $$->data.b = (strcmp($1->data.s, $3->data.s) == 0);
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                                ////printf("PRINT : %f\n", $$->data.b);
                                                                                                 break;
                                                                                             case TYPE_BOOL:
                                                                                                 $$->data.b = ($1->data.b == $3->data.b);
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                               // //printf("PRINT : %f\n", $$->data.b);
                                                                                                 break;
                                                                                             default:
                                                                                                 yyerror("Invalid type for equality comparison");
                                                                                                 $$->data.b = 0;
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                               // //printf("PRINT : %f\n", $$->data.b);
                                                                                         }
                                                                                     }
                                                                                 }
@@ -304,24 +304,24 @@ expression:
                                                                                         switch ($1->type) {
                                                                                             case TYPE_INT:
                                                                                                 $$->data.b = ($1->data.i != $3->data.i);
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                                //printf("PRINT : %f\n", $$->data.b);
                                                                                                 break;
                                                                                             case TYPE_FLOAT:
                                                                                                 $$->data.b = ($1->data.f != $3->data.f);
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                                //printf("PRINT : %f\n", $$->data.b);
                                                                                                 break;
                                                                                             case TYPE_STRING:
                                                                                                 $$->data.b = (strcmp($1->data.s, $3->data.s) != 0);
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                                //printf("PRINT : %f\n", $$->data.b);
                                                                                                 break;
                                                                                             case TYPE_BOOL:
                                                                                                 $$->data.b = ($1->data.b != $3->data.b);
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                                //printf("PRINT : %f\n", $$->data.b);
                                                                                                 break;
                                                                                             default:
                                                                                                 yyerror("Invalid type for inequality comparison");
                                                                                                 $$->data.b = 1;
-                                                                                                printf("PRINT : %f\n", $$->data.b);
+                                                                                                //printf("PRINT : %f\n", $$->data.b);
                                                                                         }
                                                                                     }
                                                                                 }
@@ -335,7 +335,7 @@ expression:
                                                                                         $$ = malloc(sizeof(val));
                                                                                         $$->type = TYPE_BOOL;
                                                                                         $$->data.b = $1->data.b && $3->data.b;
-                                                                                        printf("PRINT : %f\n", $$->data.b);
+                                                                                        //printf("PRINT : %f\n", $$->data.b);
                                                                                     }
                                                                                 }
     | expression OR atomic {
@@ -348,7 +348,7 @@ expression:
                                                                                         $$ = malloc(sizeof(val));
                                                                                         $$->type = TYPE_BOOL;
                                                                                         $$->data.b = $1->data.b || $3->data.b;
-                                                                                        printf("PRINT : %f\n", $$->data.b);
+                                                                                        //printf("PRINT : %f\n", $$->data.b);
                                                                                     }
                                                                                 }
     | NOT expression {
@@ -361,7 +361,7 @@ expression:
                                                                                         $$ = malloc(sizeof(val));
                                                                                         $$->type = TYPE_BOOL;
                                                                                         $$->data.b = !$2->data.b;
-                                                                                        printf("PRINT : %f\n", $$->data.b);
+                                                                                        //printf("PRINT : %f\n", $$->data.b);
                                                                                     }
                                                                                 }
     | expression LESS atomic {
@@ -373,10 +373,10 @@ expression:
                                                                                             float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                             float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                             $$->data.b = (left < right);
-                                                                                            printf("PRINT : %f\n", $$->data.b);
+                                                                                            //printf("PRINT : %f\n", $$->data.b);
                                                                                         } else {
                                                                                             $$->data.b = ($1->data.i < $3->data.i);
-                                                                                            printf("PRINT : %f\n", $$->data.b);
+                                                                                            //printf("PRINT : %f\n", $$->data.b);
                                                                                         }
                                                                                     } else {
                                                                                         yyerror("Comparison operator '<' requires numeric operands");
@@ -394,10 +394,10 @@ expression:
                                                                                             float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                             float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                             $$->data.b = (left <= right);
-                                                                                            printf("PRINT : %f\n", $$->data.b);
+                                                                                            //printf("PRINT : %f\n", $$->data.b);
                                                                                         } else {
                                                                                             $$->data.b = ($1->data.i <= $3->data.i);
-                                                                                            printf("PRINT : %f\n", $$->data.b);
+                                                                                            //printf("PRINT : %f\n", $$->data.b);
                                                                                         }
                                                                                     } else {
                                                                                         yyerror("Comparison operator '<=' requires numeric operands");
@@ -415,10 +415,10 @@ expression:
                                                                                             float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                             float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                             $$->data.b = (left > right);
-                                                                                            printf("PRINT : %f\n", $$->data.b);
+                                                                                            //printf("PRINT : %f\n", $$->data.b);
                                                                                         } else {
                                                                                             $$->data.b = ($1->data.i > $3->data.i);
-                                                                                            printf("PRINT : %f\n", $$->data.b);
+                                                                                            //printf("PRINT : %f\n", $$->data.b);
                                                                                         }
                                                                                     } else {
                                                                                         yyerror("Comparison operator '>' requires numeric operands");
@@ -436,10 +436,10 @@ expression:
                                                                                             float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                             float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                             $$->data.b = (left >= right);
-                                                                                            printf("PRINT : %f\n", $$->data.b);
+                                                                                            //printf("PRINT : %f\n", $$->data.b);
                                                                                         } else {
                                                                                             $$->data.b = ($1->data.i >= $3->data.i);
-                                                                                            printf("PRINT : %f\n", $$->data.b);
+                                                                                            //printf("PRINT : %f\n", $$->data.b);
                                                                                         }
                                                                                     } else {
                                                                                         yyerror("Comparison operator '>=' requires numeric operands");
@@ -459,10 +459,10 @@ expression:
                                                                                     
                                                                                     if ($2->type == TYPE_INT) {
                                                                                         $$->data.i = ++($2->data.i);
-                                                                                        printf("PRINT : %f\n", $$->data.i);  
+                                                                                        //printf("PRINT : %f\n", $$->data.i);  
                                                                                     } else {
                                                                                         $$->data.f = ++($2->data.f); 
-                                                                                        printf("PRINT : %f\n", $$->data.f);
+                                                                                        //printf("PRINT : %f\n", $$->data.f);
                                                                                     }
                                                                                 }
     | expression INCR {
@@ -476,10 +476,10 @@ expression:
                                                                                     
                                                                                     if ($1->type == TYPE_INT) {
                                                                                         $$->data.i = $1->data.i++;  
-                                                                                        printf("PRINT : %f\n", $$->data.i);
+                                                                                        //printf("PRINT : %f\n", $$->data.i);
                                                                                     } else {
                                                                                         $$->data.f = $1->data.f++;  
-                                                                                        printf("PRINT : %f\n", $$->data.f);
+                                                                                        //printf("PRINT : %f\n", $$->data.f);
                                                                                     }
                                                                                 }
     | expression BIT_AND expression {
@@ -487,7 +487,7 @@ expression:
                                                                                         $$ = malloc(sizeof(val));
                                                                                         $$->type = TYPE_INT;
                                                                                         $$->data.i = $1->data.i & $3->data.i;
-                                                                                        printf("PRINT : %f\n", $$->data.i);
+                                                                                        //printf("PRINT : %f\n", $$->data.i);
                                                                                     } else {
                                                                                         yyerror("Bitwise AND requires integer operands");
                                                                                         $$ = malloc(sizeof(val));
@@ -501,7 +501,7 @@ expression:
                                                                                         $$ = malloc(sizeof(val));
                                                                                         $$->type = TYPE_INT;
                                                                                         $$->data.i = $1->data.i | $3->data.i;
-                                                                                        printf("PRINT : %f\n", $$->data.i);
+                                                                                  //      //printf("PRINT : %f\n", $$->data.i);
                                                                                     } else {
                                                                                         yyerror("Bitwise OR requires integer operands");
                                                                                         $$ = malloc(sizeof(val));
@@ -515,7 +515,7 @@ expression:
                                                                                         $$ = malloc(sizeof(val));
                                                                                         $$->type = TYPE_INT;
                                                                                         $$->data.i = $1->data.i ^ $3->data.i;
-                                                                                        printf("PRINT : %f\n", $$->data.i);
+                                                                                        //printf("PRINT : %f\n", $$->data.i);
                                                                                     } else {
                                                                                         yyerror("Bitwise XOR requires integer operands");
                                                                                         $$ = malloc(sizeof(val));
@@ -529,7 +529,7 @@ expression:
                                                                                         $$ = malloc(sizeof(val));
                                                                                         $$->type = TYPE_INT;
                                                                                         $$->data.i = ~$2->data.i;
-                                                                                        printf("PRINT : %f\n", $$->data.i);
+                                                                                        //printf("PRINT : %f\n", $$->data.i);
                                                                                     } else {
                                                                                         yyerror("Bitwise NOT requires integer operand");
                                                                                         $$ = malloc(sizeof(val));
@@ -734,6 +734,9 @@ atomic:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_STRING;
                                                                                 $$->data.s = $1;
+                                                                            }
+    | '(' expression ')'                                                    {
+                                                                                $$ = $2;
                                                                             }
 
 

@@ -52,7 +52,8 @@
 "{"                                             { return '{'; }    
 "}"                                             { return '}'; }
 
-
+"ba2y"                                          { return MOD; }//remainder
+"**"                                            { return POWER; }
 "-"                                             { return MINUS; }
 "+"                                             { return PLUS; }
 "*"                                             { return MULTIPLY; }

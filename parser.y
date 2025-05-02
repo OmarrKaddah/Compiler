@@ -31,7 +31,7 @@
 %type <s> assignment_statement print_statement
 
 /* Operator tokens */
-%token MINUS PLUS MULTIPLY DIVIDE
+%token MINUS PLUS MULTIPLY DIVIDE MOD POWER
 %token AND OR NOT
 %token EQUAL EQUAL_EQUAL NOT_EQUAL
 %token LESS LESS_EQUAL GREATER GREATER_EQUAL
@@ -50,8 +50,9 @@
 %left EQUAL_EQUAL NOT_EQUAL
 %left LESS LESS_EQUAL GREATER GREATER_EQUAL
 %left PLUS MINUS
-%left MULTIPLY DIVIDE
-%right NOT BIT_NOT
+%left MULTIPLY DIVIDE MOD
+%right NOT BIT_NOT 
+%right POWER
 %right INCR
 
 %%
@@ -509,6 +510,47 @@ expression:
                                                                                 $$->data.f = $1->data.f++;
                                                                             }
                                                                         }
+                                                                            | expression MOD expression %prec MOD
+        {
+            if ($3->type == TYPE_INT && $3->data.i == 0) {
+                yyerror("Modulus by zero");
+            } else if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
+                $$ = malloc(sizeof(val));
+                $$->type = TYPE_INT;
+                $$->data.i = $1->data.i % $3->data.i;
+            } else {
+                yyerror("Modulus requires integer operands");
+                $$ = malloc(sizeof(val));
+                $$->type = TYPE_INT;
+                $$->data.i = 0;
+            }
+        }
+    | expression POWER expression %prec POWER
+        {
+            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                $$ = malloc(sizeof(val));
+                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                    $$->type = TYPE_FLOAT;
+                    float base = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                    float exponent = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                    $$->data.f = powf(base, exponent);
+                } else {
+                    $$->type = TYPE_INT;
+                    // Simple integer power (won't handle negative exponents well)
+                    int result = 1;
+                    for (int i = 0; i < $3->data.i; i++) {
+                        result *= $1->data.i;
+                    }
+                    $$->data.i = result;
+                }
+            } else {
+                yyerror("Power operation requires numeric operands");
+                $$ = malloc(sizeof(val));
+                $$->type = TYPE_INT;
+                $$->data.i = 0;
+            }
+        }
     | '(' expression ')'
                                                                         {
                                                                             $$ = $2;

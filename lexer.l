@@ -90,6 +90,7 @@
 "madam"                                         { return WHILE; } // while
 "e3mel"                                         { return DO; } // Fixed multi-word keyword
 "le7ad"                                         { return FOR; } // for
+"khatwa"                                        { return STEP; } // STEP
 "ekhtar"                                        { return SWITCH; } // switch
 "7ala"                                          { return CASE; } // case
 "thabet"                                        { return CONST; } // const

@@ -40,10 +40,10 @@
       know about them.  */
    enum yytokentype {
      INT = 258,
-     BOOL = 259,
-     FLOAT = 260,
-     STRING = 261,
-     IDENTIFIER = 262,
+     FLOAT = 259,
+     STRING = 260,
+     IDENTIFIER = 261,
+     BOOL = 262,
      MINUS = 263,
      PLUS = 264,
      MULTIPLY = 265,
@@ -70,7 +70,7 @@
      IF = 286,
      ELSE = 287,
      WHILE = 288,
-     DO_WHILE = 289,
+     DO = 289,
      FOR = 290,
      SWITCH = 291,
      CASE = 292,
@@ -87,10 +87,10 @@
 #endif
 /* Tokens.  */
 #define INT 258
-#define BOOL 259
-#define FLOAT 260
-#define STRING 261
-#define IDENTIFIER 262
+#define FLOAT 259
+#define STRING 260
+#define IDENTIFIER 261
+#define BOOL 262
 #define MINUS 263
 #define PLUS 264
 #define MULTIPLY 265
@@ -117,7 +117,7 @@
 #define IF 286
 #define ELSE 287
 #define WHILE 288
-#define DO_WHILE 289
+#define DO 289
 #define FOR 290
 #define SWITCH 291
 #define CASE 292
@@ -136,14 +136,17 @@
 
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 typedef union YYSTYPE
-#line 12 "parser.y"
+#line 10 "parser.y"
 {
     int i;
     float f;
     char* s;
+    int b; 
+    val *v;
+ 
 }
 /* Line 1529 of yacc.c.  */
-#line 147 "parser.tab.h"
+#line 150 "parser.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

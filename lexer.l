@@ -1,8 +1,6 @@
 /* Definitions */
 %{
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <string.h>
+    #include "val.h"
     #include "parser.tab.h"
 %}
 
@@ -90,7 +88,7 @@
 "law"                                           { return IF; } // if
 "aw"                                            { return ELSE; } // else
 "madam"                                         { return WHILE; } // while
-"e3mel[ \t]+madam"                              { return DO_WHILE; } // Fixed multi-word keyword
+"e3mel"                                         { return DO; } // Fixed multi-word keyword
 "le7ad"                                         { return FOR; } // for
 "ekhtar"                                        { return SWITCH; } // switch
 "7ala"                                          { return CASE; } // case

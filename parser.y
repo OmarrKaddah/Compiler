@@ -1,7 +1,5 @@
 %{
-    #include <stdio.h>
-    #include <stdlib.h>
-    #include <string.h>
+    #include "val.h"
 
     extern int yylex();
     void yyerror(const char* s);
@@ -13,12 +11,18 @@
     int i;
     float f;
     char* s;
+    int b; 
+    val *v;
+ 
 }
 
 /* Token declarations */
-%token <i> INT BOOL
+%token <i> INT
 %token <f> FLOAT
 %token <s> STRING IDENTIFIER
+%token <b> BOOL
+%type <v> expression
+%type <s> assignment_statement
 %token MINUS PLUS MULTIPLY DIVIDE
 %token AND OR NOT
 %token EQUAL EQUAL_EQUAL NOT_EQUAL
@@ -26,9 +30,9 @@
 %token BIT_AND BIT_OR BIT_XOR BIT_NOT
 %token PLUS_EQUAL MINUS_EQUAL TIMES_EQUAL DIVIDE_EQUAL
 %token INCR
-%token IF ELSE WHILE DO_WHILE FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT
+%token IF ELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT
 %token INT_TYPE FLOAT_TYPE STRING_TYPE BOOL_TYPE
-%type <i> expression
+
 
 /* Operator precedence */
 %left OR
@@ -51,7 +55,7 @@ program:
     ;
 
 statement:
-    expression ';'
+    assignment_statement ';'
     | declaration ';'
     | if_statement
     | while_statement
@@ -63,7 +67,11 @@ statement:
     | continue_statement
     | print_statement
     | block_statement
+    
     ;
+
+assignment_statement:
+    IDENTIFIER EQUAL expression ;
 
 block_statement:
     '{' statement_list '}'
@@ -75,20 +83,21 @@ statement_list:
     ;
 
 if_statement:
-    IF '(' expression ')' statement
-    | IF '(' expression ')' statement ELSE statement
+    IF '(' expression ')' block_statement
+    | IF '(' expression ')' block_statement ELSE block_statement
+
     ;
 
 while_statement:
-    WHILE '(' expression ')' statement
+    WHILE '(' expression ')' block_statement
     ;
 
 do_while_statement:
-    DO_WHILE '(' expression ')' ';'
+    DO block_statement WHILE '(' expression ')' ';'
     ;
 
 for_statement:
-    FOR '(' expression ';' expression ';' expression ')' statement
+    FOR '(' expression ';' expression ';' expression ')' block_statement
     ;
 
 switch_statement:
@@ -101,7 +110,7 @@ case_list:
     ;
 
 case_statement:
-    CASE expression ':' statement
+    CASE expression ':' statement ';'
     ;
 
 declaration:
@@ -131,52 +140,178 @@ continue_statement:
 
 print_statement:
     PRINT '(' expression ')' ';' {
-        printf("PRINT: %d\n", $3);
+    //  printf("PRINT: %d\n", $3);
     }
 ;
 
 expression:
-    INT { $$ = $1; }
-    | FLOAT
-    | STRING
-    | BOOL
-    | IDENTIFIER
 
-    | expression PLUS expression               { $$ = $1 + $3;}
-    | expression MINUS expression             { $$ = $1 - $3;}
-    | expression MULTIPLY expression         {$$ = $1 * $3;}
-  
+     expression PLUS expression                                            {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                                        if ($1->type == TYPE_FLOAT && $3->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.f + $3->data.f;
+                                                                                            printf("PRINT : %f\n", $$->data.f);
+                                                                                        }
+                                                                                        else if ($1->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.f + $3->data.i;
+                                                                                        }
+                                                                                        else if ($3->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.i + $3->data.f;
+                                                                                        }
+                                                                                        else {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_INT;
+                                                                                            $$->data.i = $1->data.i + $3->data.i;
+                                                                                        }
+                                                                                    }
+                                                                                    else {
+                                                                                        yyerror("Invalid expression: cannot perform an addition operation between non-numerical expressions.");
+                                                                                    } }
+    | expression MINUS expression                                           {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                                        if ($1->type == TYPE_FLOAT && $3->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.f - $3->data.f;
+                                                                                        }
+                                                                                        else if ($1->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.f - $3->data.i;
+                                                                                        }
+                                                                                        else if ($3->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.i - $3->data.f;
+                                                                                        }
+                                                                                        else {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_INT;
+                                                                                            $$->data.i = $1->data.i - $3->data.i;
+                                                                                        }
+                                                                                    }
+                                                                                    else {
+                                                                                        yyerror("Invalid expression: cannot perform a subtraction operation between non-numerical expressions.");
+                                                                                    } }
+    | expression MULTIPLY expression                                         {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                                        if ($1->type == TYPE_FLOAT && $3->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.f * $3->data.f;
+                                                                                        }
+                                                                                        else if ($1->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.f * $3->data.i;
+                                                                                        }
+                                                                                        else if ($3->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.i * $3->data.f;
+                                                                                        }
+                                                                                        else {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_INT;
+                                                                                            $$->data.i = $1->data.i *$3->data.i;
+                                                                                        }
+                                                                                    }
+                                                                                    else {
+                                                                                        yyerror("Invalid expression: cannot perform an multiplication operation between non-numerical expressions.");
+                                                                                    } }
     | expression DIVIDE expression {
         if ($3 == 0) {
             yyerror("Division by zero");
             $$ = 0;
+        } else {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                                        if ($1->type == TYPE_FLOAT && $3->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.f / $3->data.f;
+                                                                                        }
+                                                                                        else if ($1->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.f / $3->data.i;
+                                                                                        }
+                                                                                        else if ($3->type == TYPE_FLOAT) {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_FLOAT;
+                                                                                            $$->data.f = $1->data.i / $3->data.f;
+                                                                                        }
+                                                                                        else {
+                                                                                            $$ = malloc(sizeof(val));
+                                                                                            $$->type = TYPE_INT;
+                                                                                            $$->data.i = $1->data.i / $3->data.i;
+                                                                                        }
+                                                                                    }
+                                                                                    else {
+                                                                                        yyerror("Invalid expression: cannot perform an division operation between non-numerical expressions.");
+                                                                                    } }
+    }  
+
+
+    | '(' expression ')' { $$ = $2; }
+
+
+    /* | expression AND expression //{ $$ = $1 && $3; }
+    | expression OR expression //{ $$ = $1 || $3; }
+    | expression EQUAL_EQUAL expression// { $$ = $1 == $3; }
+    | expression NOT_EQUAL expression //{ $$ = $1 != $3; }
+    | expression LESS expression //{ $$ = $1 < $3; }
+    | expression LESS_EQUAL expression// { $$ = $1 <= $3; }
+    | expression GREATER expression //{ $$ = $1 > $3; }
+    | expression GREATER_EQUAL expression// { $$ = $1 >= $3; }
+    | expression BIT_AND expression //{ $$ = $1 & $3; }
+    | expression BIT_OR expression //{ $$ = $1 | $3; }
+    | expression BIT_XOR expression //{ $$ = $1 ^ $3; }
+    | NOT expression //{ $$ = !$2; }
+    | BIT_NOT expression //{ $$ = ~$2; }
+    | expression EQUAL expression //{ $$ = $3;  }
+    | expression PLUS_EQUAL expression //{ $$ = $1 + $3;}
+    | expression MINUS_EQUAL expression //{ $$ = $1 - $3; }
+    | expression TIMES_EQUAL expression //{ $$ = $1 * $3; }
+    | expression DIVIDE_EQUAL expression   */
+    /* {
+        if ($3 == 0) {
+            yyerror("Division by zero in assignment");
+            $$ = $1;
         } else {
             $$ = $1 / $3;
         }
-    }
-    | '(' expression ')' {
-        $$ = $2;
-    }
-    | expression AND expression
-    | expression OR expression
-    | expression EQUAL_EQUAL expression
-    | expression NOT_EQUAL expression
-    | expression LESS expression
-    | expression LESS_EQUAL expression
-    | expression GREATER expression
-    | expression GREATER_EQUAL expression
-    | expression BIT_AND expression
-    | expression BIT_OR expression
-    | expression BIT_XOR expression
-    | NOT expression
-    | BIT_NOT expression
-    | expression EQUAL expression
-    | expression PLUS_EQUAL expression
-    | expression MINUS_EQUAL expression
-    | expression TIMES_EQUAL expression
-    | expression DIVIDE_EQUAL expression
-    | INCR expression
-    | expression INCR
+    } */
+    /* | INCR expression //{ $$ = ++$2; }
+    | expression INCR //{ $$ = $1++; } */
+    | INT                                                                   {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = $1;
+                                                                            }
+    | FLOAT 
+
+                                                                            {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_FLOAT;
+                                                                                $$->data.f = $1;
+                                                                            }
+
+    | STRING                                                                {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_STRING;
+                                                                                $$->data.s = $1;
+                                                                            }
+
+
+    | BOOL                                                                  {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                $$->data.i = $1;
+                                                                            }
+
+
     ;
 
 %%

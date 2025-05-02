@@ -147,409 +147,406 @@ continue_statement:
     ;
 
 print_statement:
-    PRINT '(' expression ')' ';' {
-        if ($$ == NULL) {
-            yyerror("Invalid expression in print statement");
-            
-        }
-        
-        switch ($3->type) {
-            case TYPE_INT:
-                printf("%d\n", $3->data.i);
-                break;
-            case TYPE_FLOAT:
-                printf("%f\n", $3->data.f);
-                break;
-            case TYPE_STRING:
-                printf("%s\n", $3->data.s);
-                break;
-            case TYPE_BOOL:
-                printf($3->data.b ? "true\n" : "false\n");
-                break;
-            default:
-                yyerror("Unknown type in print statement");
-        }
-        
-        // Free the allocated val structure
-        free($3);
-    }
-    ;
+                                                                      PRINT '(' expression ')' ';' {
+
+
+                                                                          switch ($3->type) {
+                                                                              case TYPE_INT:
+                                                                                  printf("%d\n", $3->data.i);
+                                                                                  break;
+                                                                              case TYPE_FLOAT:
+                                                                                  printf("%f\n", $3->data.f);
+                                                                                  break;
+                                                                              case TYPE_STRING:
+                                                                                  printf("%s\n", $3->data.s);
+                                                                                  break;
+                                                                              case TYPE_BOOL:
+                                                                                  printf($3->data.b ? "true\n" : "false\n");
+                                                                                  break;
+                                                                              default:
+                                                                                  yyerror("Unknown type in print statement");
+                                                                          }
+
+                                                                          // Free the allocated val structure
+                                                                          free($3);
+                                                                      }
+                                                                      ;
 
 expression:
     atomic
     | expression PLUS expression %prec PLUS
-        { 
-            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                $$ = malloc(sizeof(val));
-                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
-                    $$->type = TYPE_FLOAT;
-                    float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                    float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                    $$->data.f = left + right;
-                } else {
-                    $$->type = TYPE_INT;
-                    $$->data.i = $1->data.i + $3->data.i;
-                }
-            } else {
-                yyerror("Invalid expression: cannot perform addition between non-numerical expressions.");
-            }
-        }
+                                                                      { 
+                                                                          if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                              ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                              $$ = malloc(sizeof(val));
+                                                                              if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                  $$->type = TYPE_FLOAT;
+                                                                                  float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                  float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                  $$->data.f = left + right;
+                                                                              } else {
+                                                                                  $$->type = TYPE_INT;
+                                                                                  $$->data.i = $1->data.i + $3->data.i;
+                                                                              }
+                                                                          } else {
+                                                                              yyerror("Invalid expression: cannot perform addition between non-numerical expressions.");
+                                                                          }
+                                                                      }
     | expression MINUS expression %prec MINUS
-        {
-            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                $$ = malloc(sizeof(val));
-                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
-                    $$->type = TYPE_FLOAT;
-                    float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                    float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                    $$->data.f = left - right;
-                } else {
-                    $$->type = TYPE_INT;
-                    $$->data.i = $1->data.i - $3->data.i;
-                }
-            } else {
-                yyerror("Invalid expression: cannot perform subtraction between non-numerical expressions.");
-            }
-        }
+                                                                       {
+                                                                           if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                               ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                               $$ = malloc(sizeof(val));
+                                                                               if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                   $$->type = TYPE_FLOAT;
+                                                                                   float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                   float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                   $$->data.f = left - right;
+                                                                               } else {
+                                                                                   $$->type = TYPE_INT;
+                                                                                   $$->data.i = $1->data.i - $3->data.i;
+                                                                               }
+                                                                           } else {
+                                                                               yyerror("Invalid expression: cannot perform subtraction between non-numerical expressions.");
+                                                                           }
+                                                                       }
     | expression MULTIPLY expression %prec MULTIPLY
-        {
-            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                $$ = malloc(sizeof(val));
-                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
-                    $$->type = TYPE_FLOAT;
-                    float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                    float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                    $$->data.f = left * right;
-                } else {
-                    $$->type = TYPE_INT;
-                    $$->data.i = $1->data.i * $3->data.i;
-                }
-            } else {
-                yyerror("Invalid expression: cannot perform multiplication between non-numerical expressions.");
-            }
-        }
+                                                                     {
+                                                                         if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                             ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                             $$ = malloc(sizeof(val));
+                                                                             if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                 $$->type = TYPE_FLOAT;
+                                                                                 float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                 $$->data.f = left * right;
+                                                                             } else {
+                                                                                 $$->type = TYPE_INT;
+                                                                                 $$->data.i = $1->data.i * $3->data.i;
+                                                                             }
+                                                                         } else {
+                                                                             yyerror("Invalid expression: cannot perform multiplication between non-numerical expressions.");
+                                                                         }
+                                                                     }
     | expression DIVIDE expression %prec DIVIDE
-        {
-            if (($3->type == TYPE_INT && $3->data.i == 0) ||
-                ($3->type == TYPE_FLOAT && $3->data.f == 0.0f)) {
-                yyerror("Division by zero");
-            } else if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                      ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_FLOAT;
-                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                $$->data.f = left / right;
-            } else {
-                yyerror("Invalid expression: cannot perform division between non-numerical expressions.");
-            }
-        }
-   | expression EQUAL_EQUAL expression %prec EQUAL_EQUAL
-        {
-            if ($1->type != $3->type) {
-                yyerror("Invalid type for equality comparison");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = 0;
-                
-                // Print the failed comparison
-                printf("Comparison failed: ");
-                print_val($1);
-                printf(" == ");
-                print_val($3);
-                printf(" -> false (type mismatch)\n");
-            } else {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                int result;
-                switch ($1->type) {
-                    case TYPE_INT:
-                        result = ($1->data.i == $3->data.i);
-                        $$->data.b = result;
-                        break;
-                    case TYPE_FLOAT:
-                        result = ($1->data.f == $3->data.f);
-                        $$->data.b = result;
-                        break;
-                    case TYPE_STRING:
-                        result = (strcmp($1->data.s, $3->data.s) == 0);
-                        $$->data.b = result;
-                        break;
-                    case TYPE_BOOL:
-                        result = ($1->data.b == $3->data.b);
-                        $$->data.b = result;
-                        break;
-                    default:
-                        yyerror("Invalid type for equality comparison");
-                        $$->data.b = 0;
-                        result = 0;
-                }
-                
-                // Print the comparison and result
-                printf("Comparison: ");
-                print_val($1);
-                printf(" == ");
-                print_val($3);
-                printf(" -> %s\n", result ? "true" : "false");
-            }
-            
-            // Free the operands
-            free_val($1);
-            free_val($3);
-        }
+                                                                     {
+                                                                         if (($3->type == TYPE_INT && $3->data.i == 0) ||
+                                                                             ($3->type == TYPE_FLOAT && $3->data.f == 0.0f)) {
+                                                                             yyerror("Division by zero");
+                                                                         } else if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                                   ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                             $$ = malloc(sizeof(val));
+                                                                             $$->type = TYPE_FLOAT;
+                                                                             float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                             float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                             $$->data.f = left / right;
+                                                                         } else {
+                                                                             yyerror("Invalid expression: cannot perform division between non-numerical expressions.");
+                                                                         }
+                                                                     }
+    | expression EQUAL_EQUAL expression %prec EQUAL_EQUAL
+                                                                     {
+                                                                         if ($1->type != $3->type) {
+                                                                             yyerror("Invalid type for equality comparison");
+                                                                             $$ = malloc(sizeof(val));
+                                                                             $$->type = TYPE_BOOL;
+                                                                             $$->data.b = 0;
+                                                                             
+                                                                             // Print the failed comparison
+                                                                             printf("Comparison failed: ");
+                                                                             print_val($1);
+                                                                             printf(" == ");
+                                                                             print_val($3);
+                                                                             printf(" -> false (type mismatch)\n");
+                                                                         } else {
+                                                                             $$ = malloc(sizeof(val));
+                                                                             $$->type = TYPE_BOOL;
+                                                                             int result;
+                                                                             switch ($1->type) {
+                                                                                 case TYPE_INT:
+                                                                                     result = ($1->data.i == $3->data.i);
+                                                                                     $$->data.b = result;
+                                                                                     break;
+                                                                                 case TYPE_FLOAT:
+                                                                                     result = ($1->data.f == $3->data.f);
+                                                                                     $$->data.b = result;
+                                                                                     break;
+                                                                                 case TYPE_STRING:
+                                                                                     result = (strcmp($1->data.s, $3->data.s) == 0);
+                                                                                     $$->data.b = result;
+                                                                                     break;
+                                                                                 case TYPE_BOOL:
+                                                                                     result = ($1->data.b == $3->data.b);
+                                                                                     $$->data.b = result;
+                                                                                     break;
+                                                                                 default:
+                                                                                     yyerror("Invalid type for equality comparison");
+                                                                                     $$->data.b = 0;
+                                                                                     result = 0;
+                                                                             }
+                                                                             
+                                                                             // Print the comparison and result
+                                                                             printf("Comparison: ");
+                                                                             print_val($1);
+                                                                             printf(" == ");
+                                                                             print_val($3);
+                                                                             printf(" -> %s\n", result ? "true" : "false");
+                                                                         }
+                                                                         
+                                                                         // Free the operands
+                                                                         free_val($1);
+                                                                         free_val($3);
+                                                                     }
     | expression NOT_EQUAL expression %prec NOT_EQUAL
-        {
-            if ($1->type != $3->type) {
-                yyerror("Invalid type for inequality comparison");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = 1;
-            } else {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                switch ($1->type) {
-                    case TYPE_INT:
-                        $$->data.b = ($1->data.i != $3->data.i);
-                        break;
-                    case TYPE_FLOAT:
-                        $$->data.b = ($1->data.f != $3->data.f);
-                        break;
-                    case TYPE_STRING:
-                        $$->data.b = (strcmp($1->data.s, $3->data.s) != 0);
-                        break;
-                    case TYPE_BOOL:
-                        $$->data.b = ($1->data.b != $3->data.b);
-                        break;
-                    default:
-                        yyerror("Invalid type for inequality comparison");
-                        $$->data.b = 1;
-                }
-            }
-        }
+                                                                      {
+                                                                          if ($1->type != $3->type) {
+                                                                              yyerror("Invalid type for inequality comparison");
+                                                                              $$ = malloc(sizeof(val));
+                                                                              $$->type = TYPE_BOOL;
+                                                                              $$->data.b = 1;
+                                                                          } else {
+                                                                              $$ = malloc(sizeof(val));
+                                                                              $$->type = TYPE_BOOL;
+                                                                              switch ($1->type) {
+                                                                                  case TYPE_INT:
+                                                                                      $$->data.b = ($1->data.i != $3->data.i);
+                                                                                      break;
+                                                                                  case TYPE_FLOAT:
+                                                                                      $$->data.b = ($1->data.f != $3->data.f);
+                                                                                      break;
+                                                                                  case TYPE_STRING:
+                                                                                      $$->data.b = (strcmp($1->data.s, $3->data.s) != 0);
+                                                                                      break;
+                                                                                  case TYPE_BOOL:
+                                                                                      $$->data.b = ($1->data.b != $3->data.b);
+                                                                                      break;
+                                                                                  default:
+                                                                                      yyerror("Invalid type for inequality comparison");
+                                                                                      $$->data.b = 1;
+                                                                              }
+                                                                          }
+                                                                      }
     | expression AND expression %prec AND
-        {
-            if ($1->type != TYPE_BOOL || $3->type != TYPE_BOOL) {
-                yyerror("Logical AND requires boolean operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = 0;
-            } else {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = $1->data.b && $3->data.b;
-            }
-        }
+                                                                      {
+                                                                          if ($1->type != TYPE_BOOL || $3->type != TYPE_BOOL) {
+                                                                              yyerror("Logical AND requires boolean operands");
+                                                                              $$ = malloc(sizeof(val));
+                                                                              $$->type = TYPE_BOOL;
+                                                                              $$->data.b = 0;
+                                                                          } else {
+                                                                              $$ = malloc(sizeof(val));
+                                                                              $$->type = TYPE_BOOL;
+                                                                              $$->data.b = $1->data.b && $3->data.b;
+                                                                          }
+                                                                      }
     | expression OR expression %prec OR
-        {
-            if ($1->type != TYPE_BOOL || $3->type != TYPE_BOOL) {
-                yyerror("Logical OR requires boolean operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = 0;
-            } else {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = $1->data.b || $3->data.b;
-            }
-        }
+                                                                        {
+                                                                            if ($1->type != TYPE_BOOL || $3->type != TYPE_BOOL) {
+                                                                                yyerror("Logical OR requires boolean operands");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                $$->data.b = 0;
+                                                                            } else {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                $$->data.b = $1->data.b || $3->data.b;
+                                                                            }
+                                                                        }
     | expression LESS expression %prec LESS
-        {
-            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                $$->data.b = (left < right);
-            } else {
-                yyerror("Comparison operator '<' requires numeric operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = 0;
-            }
-        }
+                                                                        {
+                                                                            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                $$->data.b = (left < right);
+                                                                            } else {
+                                                                                yyerror("Comparison operator '<' requires numeric operands");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                $$->data.b = 0;
+                                                                            }
+                                                                        }
     | expression LESS_EQUAL expression %prec LESS_EQUAL
-        {
-            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                $$->data.b = (left <= right);
-            } else {
-                yyerror("Comparison operator '<=' requires numeric operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = 0;
-            }
-        }
+                                                                        {
+                                                                            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                $$->data.b = (left <= right);
+                                                                            } else {
+                                                                                yyerror("Comparison operator '<=' requires numeric operands");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                $$->data.b = 0;
+                                                                            }
+                                                                        }
     | expression GREATER expression %prec GREATER
-        {
-            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                $$->data.b = (left > right);
-            } else {
-                yyerror("Comparison operator '>' requires numeric operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = 0;
-            }
-        }
+                                                                        {
+                                                                            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                $$->data.b = (left > right);
+                                                                            } else {
+                                                                                yyerror("Comparison operator '>' requires numeric operands");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                $$->data.b = 0;
+                                                                            }
+                                                                        }
     | expression GREATER_EQUAL expression %prec GREATER_EQUAL
-        {
-            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                $$->data.b = (left >= right);
-            } else {
-                yyerror("Comparison operator '>=' requires numeric operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = 0;
-            }
-        }
+                                                                        {
+                                                                            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                $$->data.b = (left >= right);
+                                                                            } else {
+                                                                                yyerror("Comparison operator '>=' requires numeric operands");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                $$->data.b = 0;
+                                                                            }
+                                                                        }
     | expression BIT_AND expression %prec BIT_AND
-        {
-            if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = $1->data.i & $3->data.i;
-            } else {
-                yyerror("Bitwise AND requires integer operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = 0;
-            }
-        }
+                                                                        {
+                                                                            if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = $1->data.i & $3->data.i;
+                                                                            } else {
+                                                                                yyerror("Bitwise AND requires integer operands");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = 0;
+                                                                            }
+                                                                        }
     | expression BIT_OR expression %prec BIT_OR
-        {
-            if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = $1->data.i | $3->data.i;
-            } else {
-                yyerror("Bitwise OR requires integer operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = 0;
-            }
-        }
+                                                                        {
+                                                                            if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = $1->data.i | $3->data.i;
+                                                                            } else {
+                                                                                yyerror("Bitwise OR requires integer operands");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = 0;
+                                                                            }
+                                                                        }
     | expression BIT_XOR expression %prec BIT_XOR
-        {
-            if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = $1->data.i ^ $3->data.i;
-            } else {
-                yyerror("Bitwise XOR requires integer operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = 0;
-            }
-        }
+                                                                        {
+                                                                            if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = $1->data.i ^ $3->data.i;
+                                                                            } else {
+                                                                                yyerror("Bitwise XOR requires integer operands");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = 0;
+                                                                            }
+                                                                        }
     | NOT expression %prec NOT
-        {
-            if ($2->type != TYPE_BOOL) {
-                yyerror("Logical NOT requires boolean operand");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = 0;
-            } else {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_BOOL;
-                $$->data.b = !$2->data.b;
-            }
-        }
+                                                                        {
+                                                                            if ($2->type != TYPE_BOOL) {
+                                                                                yyerror("Logical NOT requires boolean operand");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                $$->data.b = 0;
+                                                                            } else {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_BOOL;
+                                                                                $$->data.b = !$2->data.b;
+                                                                            }
+                                                                        }
     | BIT_NOT expression %prec BIT_NOT
-        {
-            if ($2->type != TYPE_INT) {
-                yyerror("Bitwise NOT requires integer operand");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = 0;
-            } else {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = ~$2->data.i;
-            }
-        }
+                                                                        {
+                                                                            if ($2->type != TYPE_INT) {
+                                                                                yyerror("Bitwise NOT requires integer operand");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = 0;
+                                                                            } else {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = ~$2->data.i;
+                                                                            }
+                                                                        }
     | INCR expression %prec INCR
-        {
-            if ($2->type != TYPE_INT && $2->type != TYPE_FLOAT) {
-                yyerror("Increment requires numeric operand");
-                YYERROR;
-            }
-            $$ = malloc(sizeof(val));
-            $$->type = $2->type;
-            if ($2->type == TYPE_INT) {
-                $$->data.i = ++($2->data.i);
-            } else {
-                $$->data.f = ++($2->data.f);
-            }
-        }
+                                                                        {
+                                                                            if ($2->type != TYPE_INT && $2->type != TYPE_FLOAT) {
+                                                                                yyerror("Increment requires numeric operand");
+                                                                                YYERROR;
+                                                                            }
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = $2->type;
+                                                                            if ($2->type == TYPE_INT) {
+                                                                                $$->data.i = ++($2->data.i);
+                                                                            } else {
+                                                                                $$->data.f = ++($2->data.f);
+                                                                            }
+                                                                        }
     | expression INCR %prec INCR
-        {
-            if ($1->type != TYPE_INT && $1->type != TYPE_FLOAT) {
-                yyerror("Increment requires numeric operand");
-                YYERROR;
-            }
-            $$ = malloc(sizeof(val));
-            $$->type = $1->type;
-            if ($1->type == TYPE_INT) {
-                $$->data.i = $1->data.i++;
-            } else {
-                $$->data.f = $1->data.f++;
-            }
-        }
+                                                                        {
+                                                                            if ($1->type != TYPE_INT && $1->type != TYPE_FLOAT) {
+                                                                                yyerror("Increment requires numeric operand");
+                                                                                YYERROR;
+                                                                            }
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = $1->type;
+                                                                            if ($1->type == TYPE_INT) {
+                                                                                $$->data.i = $1->data.i++;
+                                                                            } else {
+                                                                                $$->data.f = $1->data.f++;
+                                                                            }
+                                                                        }
     | '(' expression ')'
-        {
-            $$ = $2;
-        }
-    ;
+                                                                        {
+                                                                            $$ = $2;
+                                                                        }
+                                                                    ;
 
 atomic:
     INT
-        {
-            $$ = malloc(sizeof(val));
-            $$->type = TYPE_INT;
-            $$->data.i = $1;
-        }
+                                                                        {
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = TYPE_INT;
+                                                                            $$->data.i = $1;
+                                                                        }
     | FLOAT
-        {
-            $$ = malloc(sizeof(val));
-            $$->type = TYPE_FLOAT;
-            $$->data.f = $1;
-        }
+                                                                        {
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = TYPE_FLOAT;
+                                                                            $$->data.f = $1;
+                                                                        }
     | STRING
-        {
-            $$ = malloc(sizeof(val));
-            $$->type = TYPE_STRING;
-            $$->data.s = $1;
-        }
+                                                                        {
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = TYPE_STRING;
+                                                                            $$->data.s = $1;
+                                                                        }
     | BOOL
-        {
-            $$ = malloc(sizeof(val));
-            $$->type = TYPE_BOOL;
-            $$->data.b = $1;
-        }
+                                                                        {
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = TYPE_BOOL;
+                                                                            $$->data.b = $1;
+                                                                        }
     | IDENTIFIER
-        {
-            $$ = malloc(sizeof(val));
-            $$->type = TYPE_STRING;
-            $$->data.s = $1;
-        }
-    ;
+                                                                        {
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = TYPE_STRING;
+                                                                            $$->data.s = $1;
+                                                                        }
+                                                                    ;
 
 %%
 /* Helper function implementations */

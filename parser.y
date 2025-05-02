@@ -21,7 +21,7 @@
 %token <f> FLOAT
 %token <s> STRING IDENTIFIER
 %token <b> BOOL
-%type <v> expression
+%type <v> expression atomic
 %type <s> assignment_statement
 %token MINUS PLUS MULTIPLY DIVIDE
 %token AND OR NOT
@@ -145,8 +145,9 @@ print_statement:
 ;
 
 expression:
+   
 
-     expression PLUS expression                                            {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+     expression PLUS atomic                                            {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
                                                                                         if ($1->type == TYPE_FLOAT && $3->type == TYPE_FLOAT) {
                                                                                             $$ = malloc(sizeof(val));
                                                                                             $$->type = TYPE_FLOAT;
@@ -172,7 +173,7 @@ expression:
                                                                                     else {
                                                                                         yyerror("Invalid expression: cannot perform an addition operation between non-numerical expressions.");
                                                                                     } }
-    | expression MINUS expression                                           {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+    | expression MINUS atomic                                           {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
                                                                                         if ($1->type == TYPE_FLOAT && $3->type == TYPE_FLOAT) {
                                                                                             $$ = malloc(sizeof(val));
                                                                                             $$->type = TYPE_FLOAT;
@@ -197,7 +198,7 @@ expression:
                                                                                     else {
                                                                                         yyerror("Invalid expression: cannot perform a subtraction operation between non-numerical expressions.");
                                                                                     } }
-    | expression MULTIPLY expression                                         {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+    | expression MULTIPLY atomic                                         {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
                                                                                         if ($1->type == TYPE_FLOAT && $3->type == TYPE_FLOAT) {
                                                                                             $$ = malloc(sizeof(val));
                                                                                             $$->type = TYPE_FLOAT;
@@ -222,7 +223,7 @@ expression:
                                                                                     else {
                                                                                         yyerror("Invalid expression: cannot perform an multiplication operation between non-numerical expressions.");
                                                                                     } }
-    | expression DIVIDE expression {
+    | expression DIVIDE atomic {
         if ($3 == 0) {
             yyerror("Division by zero");
             $$ = 0;
@@ -254,7 +255,7 @@ expression:
     }  
 
 
-    | '(' expression ')' { $$ = $2; }
+    | '(' expression ')' { $$ = $2; };
 
 
     /* | expression AND expression //{ $$ = $1 && $3; }
@@ -285,7 +286,8 @@ expression:
     } */
     /* | INCR expression //{ $$ = ++$2; }
     | expression INCR //{ $$ = $1++; } */
-    | INT                                                                   {
+atomic:
+      INT                                                                   {
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_INT;
                                                                                 $$->data.i = $1;
@@ -309,6 +311,11 @@ expression:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_BOOL;
                                                                                 $$->data.i = $1;
+                                                                            }
+    | IDENTIFIER                                                            {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_STRING;
+                                                                                $$->data.s = $1;
                                                                             }
 
 

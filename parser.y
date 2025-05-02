@@ -28,6 +28,7 @@
 %token INCR
 %token IF ELSE WHILE DO_WHILE FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT
 %token INT_TYPE FLOAT_TYPE STRING_TYPE BOOL_TYPE
+%type <i> expression
 
 /* Operator precedence */
 %left OR
@@ -129,20 +130,33 @@ continue_statement:
     ;
 
 print_statement:
-    PRINT '(' expression ')' ';'
-    ;
+    PRINT '(' expression ')' ';' {
+        printf("PRINT: %d\n", $3);
+    }
+;
 
 expression:
-    INT
+    INT { $$ = $1; }
     | FLOAT
     | STRING
     | BOOL
     | IDENTIFIER
-    | '(' expression ')'
-    | expression PLUS expression
-    | expression MINUS expression
-    | expression MULTIPLY expression
-    | expression DIVIDE expression
+
+    | expression PLUS expression               { $$ = $1 + $3;}
+    | expression MINUS expression             { $$ = $1 - $3;}
+    | expression MULTIPLY expression         {$$ = $1 * $3;}
+  
+    | expression DIVIDE expression {
+        if ($3 == 0) {
+            yyerror("Division by zero");
+            $$ = 0;
+        } else {
+            $$ = $1 / $3;
+        }
+    }
+    | '(' expression ')' {
+        $$ = $2;
+    }
     | expression AND expression
     | expression OR expression
     | expression EQUAL_EQUAL expression

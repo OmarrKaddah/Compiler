@@ -1,1 +1,0 @@
-string x = "123" print("ziad omar")

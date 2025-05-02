@@ -68,6 +68,7 @@ statement:
     | print_statement
     | block_statement
     
+    
     ;
 
 assignment_statement:
@@ -97,7 +98,8 @@ do_while_statement:
     ;
 
 for_statement:
-    FOR '(' expression ';' expression ';' expression ')' block_statement
+    FOR '(' assignment_statement ';' expression ';' expression ')' block_statement
+    | FOR '(' declaration ';' expression ';' expression ')' block_statement
     ;
 
 switch_statement:
@@ -145,7 +147,8 @@ print_statement:
 ;
 
 expression:
-   
+   atomic
+   |
 
      expression PLUS atomic                                            {  if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
                                                                                         if ($1->type == TYPE_FLOAT && $3->type == TYPE_FLOAT) {
@@ -253,9 +256,9 @@ expression:
                                                                                         yyerror("Invalid expression: cannot perform an division operation between non-numerical expressions.");
                                                                                     } }
     }  
+;
 
-
-    | '(' expression ')' { $$ = $2; };
+    //| '(' expression ')' { $$ = $2; };
 
 
     /* | expression AND expression //{ $$ = $1 && $3; }

@@ -30,7 +30,7 @@
 %token BIT_AND BIT_OR BIT_XOR BIT_NOT
 %token PLUS_EQUAL MINUS_EQUAL TIMES_EQUAL DIVIDE_EQUAL
 %token INCR
-%token IF ELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT
+%token IF ELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT STEP
 %token INT_TYPE FLOAT_TYPE STRING_TYPE BOOL_TYPE
 
 
@@ -98,8 +98,8 @@ do_while_statement:
     ;
 
 for_statement:
-    FOR '(' assignment_statement ';' expression ';' expression ')' block_statement
-    | FOR '(' declaration ';' expression ';' expression ')' block_statement
+    FOR '(' assignment_statement ';' expression ';' STEP '=' atomic  ')' block_statement 
+    | FOR '(' declaration ';' expression ';' STEP '=' atomic   ')' block_statement
     ;
 
 switch_statement:
@@ -118,6 +118,7 @@ case_statement:
 declaration:
     type_specifier IDENTIFIER
     | type_specifier IDENTIFIER EQUAL expression
+    | CONST type_specifier IDENTIFIER EQUAL expression
     ;
 
 type_specifier:

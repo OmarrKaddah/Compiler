@@ -79,10 +79,11 @@
      CONTINUE = 295,
      RETURN = 296,
      PRINT = 297,
-     INT_TYPE = 298,
-     FLOAT_TYPE = 299,
-     STRING_TYPE = 300,
-     BOOL_TYPE = 301
+     STEP = 298,
+     INT_TYPE = 299,
+     FLOAT_TYPE = 300,
+     STRING_TYPE = 301,
+     BOOL_TYPE = 302
    };
 #endif
 /* Tokens.  */
@@ -126,10 +127,11 @@
 #define CONTINUE 295
 #define RETURN 296
 #define PRINT 297
-#define INT_TYPE 298
-#define FLOAT_TYPE 299
-#define STRING_TYPE 300
-#define BOOL_TYPE 301
+#define STEP 298
+#define INT_TYPE 299
+#define FLOAT_TYPE 300
+#define STRING_TYPE 301
+#define BOOL_TYPE 302
 
 
 
@@ -146,7 +148,7 @@ typedef union YYSTYPE
  
 }
 /* Line 1529 of yacc.c.  */
-#line 150 "parser.tab.h"
+#line 152 "parser.tab.h"
 	YYSTYPE;
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1

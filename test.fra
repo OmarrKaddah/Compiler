@@ -1,4 +1,7 @@
 
 
-etba3(8 ba2y 3);
-etba3(9**2);
+rakam easy(){
+    etba3(5+3);
+}
+
+rakam x= easy();

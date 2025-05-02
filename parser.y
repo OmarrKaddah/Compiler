@@ -27,8 +27,8 @@
 %token <f> FLOAT
 %token <s> STRING IDENTIFIER
 %token <b> BOOL
-%type <v> expression atomic
-%type <s> assignment_statement print_statement
+%type <v> expression atomic function_call
+%type <s> assignment_statement print_statement 
 
 /* Operator tokens */
 %token MINUS PLUS MULTIPLY DIVIDE MOD POWER
@@ -60,6 +60,7 @@
 program:
     /* empty */
     | program statement
+    | program function_definition
     ;
 
 statement:
@@ -75,8 +76,36 @@ statement:
     | continue_statement
     | print_statement
     | block_statement
+    | function_call_statement ';'
     ;
 
+function_definition:
+    type_specifier IDENTIFIER '(' parameter_list ')' block_statement
+    | type_specifier IDENTIFIER '(' ')' block_statement
+    ;
+parameter_list:
+    parameter_declaration
+    | parameter_list ',' parameter_declaration
+    ;
+parameter_declaration:
+    type_specifier IDENTIFIER
+    ;
+function_call_statement:
+    IDENTIFIER '(' argument_list ')'                        //{
+                                                                /* $$.name = $1;
+                                                                $$.value = $3;
+                                                            } */
+    | IDENTIFIER '(' ')'
+                                                            /* {
+                                                                $$.name = $1;
+                                                                $$.value = NULL;
+                                                            }
+                                                            ; */
+
+argument_list:
+    expression
+    | argument_list ',' expression
+    ;
 assignment_statement:
     IDENTIFIER EQUAL expression
     ;
@@ -175,6 +204,9 @@ print_statement:
 
 expression:
     atomic
+    | function_call {
+        $$ = $1;
+    }
     | expression PLUS expression %prec PLUS
                                                                       { 
                                                                           if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
@@ -556,7 +588,18 @@ expression:
                                                                             $$ = $2;
                                                                         }
                                                                     ;
-
+function_call:
+     IDENTIFIER '(' argument_list ')'                                    {
+                                                                            // Here you would implement function call logic
+                                                                            // For now, just return the first argument as an example
+                                                                            // $$ = $3;
+                                                                        }
+     | IDENTIFIER '(' ')'                                               {
+                                                                            // $$ = malloc(sizeof(val));
+                                                                            // $$->type = TYPE_INT;
+                                                                            // $$->data.i = 0; // Default return for no-arg functions
+                                                                        }
+                                                                        ;
 atomic:
     INT
                                                                         {

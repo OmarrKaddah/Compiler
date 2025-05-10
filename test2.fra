@@ -1,0 +1,6 @@
+
+rakam easy(rakam x){
+    etba3(x);
+}
+
+easy("hi",5);

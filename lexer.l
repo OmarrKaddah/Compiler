@@ -39,10 +39,10 @@
     return STRING;
 }
 
-"rakam"                                         { return INT_TYPE; }
-"kasr"                                          { return FLOAT_TYPE; }
-"kalam"                                         { return STRING_TYPE; }
-"bool"                                          { return BOOL_TYPE; }
+"rakam"                                         { return T_INT; }
+"kasr"                                          { return T_FLOAT; }
+"kalam"                                         { return T_STRING; }
+"bool"                                          { return T_BOOL; }
                                                 
 
 "("                                             { return '('; }    
@@ -84,6 +84,7 @@
 ";"                                             { return ';'; }
 ":"                                             { return ':'; }
 "."                                             { return '.'; }
+","                                             { return ','; }
 
 
 "law"                                           { return IF; } // if

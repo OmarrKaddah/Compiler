@@ -1,7 +1,7 @@
 
 rakam easy(rakam x){
     etba3(x);
-    rakam y;
+    {rakam x;}
    
 }
 

@@ -31,8 +31,8 @@
 
 
 /* --- Enable verbose, “unexpected X, expecting Y…” messages --- */
-%define parse.error verbose
-%error-verbose
+/* %define parse.error verbose
+%error-verbose */
 
 %union {
     int i;
@@ -850,7 +850,7 @@ void yyerror(const char* s) {
             yylineno, s, yytext);
 }
 /* Helper function implementations */
-void print_val(val *v) {
+/* void print_val(val *v) {
     if (v == NULL) {
         printf("NULL");
         return;
@@ -872,7 +872,7 @@ void print_val(val *v) {
         default:
             printf("unknown");
     }
-}
+} */
 
 
 

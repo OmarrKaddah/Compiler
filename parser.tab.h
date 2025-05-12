@@ -35,7 +35,7 @@
 /* "%code requires" blocks.  */
 
 /* Line 1676 of yacc.c  */
-#line 26 "parser.y"
+#line 28 "parser.y"
 
   #include "symbol_table.h"   /* pulls in parameter.h */
 
@@ -107,7 +107,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 32 "parser.y"
+#line 37 "parser.y"
 
     int i;
     float f;

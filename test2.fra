@@ -1,13 +1,7 @@
 
 rakam easy(rakam x){
     etba3(x);
+    rakam y;
+   
 }
 
-easy("hi",5);
-{
-    {
-        {
-            
-        }
-    }
-}

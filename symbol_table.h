@@ -5,11 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include "val.h"
+#include "parameter.h"
 #include <stdbool.h>
 
 #define TABLE_SIZE 101
-
-typedef struct Parameter Parameter;
 
 typedef enum
 {
@@ -29,13 +28,6 @@ typedef struct Symbol
     int is_used;              // Flag to indicate if the symbol has been used
     struct Parameter *params; // For functions, the list of parameters
 } Symbol;
-
-struct Parameter // Now the full definition
-{
-    char *name;
-    val *value;
-    struct Parameter *next;
-};
 
 typedef struct SymbolTable
 {
@@ -72,5 +64,10 @@ bool is_symbol_in_current_scope(SymbolTable *table, const char *name);
 Parameter *create_param(const char *name, val *value);
 
 Parameter *append_param(Parameter *head, Parameter *p2);
+
+void print_symbol_table(SymbolTable *table);
+
+// Add this with the other function declarations
+void print_val(val *v);
 
 #endif

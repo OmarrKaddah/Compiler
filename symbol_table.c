@@ -182,3 +182,88 @@ Parameter *append_param(Parameter *head, Parameter *p2)
     cur->next = p2;
     return head;
 }
+
+void print_symbol_table(SymbolTable *table)
+{
+    if (!table)
+    {
+        printf("Symbol Table: (NULL)\n");
+        return;
+    }
+
+    printf("\n=== SYMBOL TABLE (Scope Level: %d) ===\n", table->scope_level);
+
+    // Print each bucket in the hash table
+    for (int i = 0; i < TABLE_SIZE; i++)
+    {
+        Symbol *sym = table->table[i];
+        while (sym)
+        {
+            // Print symbol name and type
+            printf("• %s [%s", sym->name,
+                   sym->sym_type == SYM_FUNCTION ? "FUNCTION" : sym->sym_type == SYM_VARIABLE ? "VARIABLE"
+                                                                                              : "CONSTANT");
+
+            // Additional info for functions
+            if (sym->sym_type == SYM_FUNCTION)
+            {
+                printf(", %d params", sym->param_count);
+            }
+            printf("]\n");
+
+            // Print value
+            printf("  Value: ");
+            print_val(sym->value);
+            printf("\n");
+
+            // Print parameters if it's a function
+            if (sym->sym_type == SYM_FUNCTION && sym->params)
+            {
+                printf("  Parameters:\n");
+                Parameter *param = sym->params;
+                while (param)
+                {
+                    printf("    - %s: ", param->name);
+                    print_val(param->value);
+                    printf("\n");
+                    param = param->next;
+                }
+            }
+
+            sym = sym->next;
+        }
+    }
+
+    // Recursively print parent scope
+    if (table->parent)
+    {
+        printf("\n↑ Parent Scope ↑\n");
+        print_symbol_table(table->parent);
+    }
+}
+
+void print_val(val *v)
+{
+    if (!v)
+    {
+        printf("NULL");
+        return;
+    }
+    switch (v->type)
+    {
+    case TYPE_INT:
+        printf("%d", v->data.i);
+        break;
+    case TYPE_FLOAT:
+        printf("%f", v->data.f);
+        break;
+    case TYPE_STRING:
+        printf("\"%s\"", v->data.s);
+        break;
+    case TYPE_BOOL:
+        printf(v->data.b ? "true" : "false");
+        break;
+    default:
+        printf("unknown");
+    }
+}

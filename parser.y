@@ -23,6 +23,10 @@
     void yyerror(const char* s);
     int yyparse();
 %}
+%code requires {
+  #include "symbol_table.h"   /* pulls in parameter.h */
+}
+
 
 
 %union {
@@ -103,8 +107,11 @@ function_definition:
             // Count parameters
             int param_count = 0;
             Parameter *p = $4;
-            while (p) { param_count++; p = p->next; }
+            while (p) { param_count++; p = p->next; 
+            
+            }
 
+            printf("parameter count %d ---",param_count);
             // Insert function with parameters
             last_symbol_inserted = insert_symbol(current_scope, $2, func_val, SYM_FUNCTION, param_count, $4);
             current_params = $4; // Store for block_statement
@@ -204,6 +211,7 @@ block_statement:
                                                                 if (current_params) {
                                                                     Parameter *param = current_params;
                                                                     while (param) {
+                                                                        
                                                                         val *v = malloc(sizeof(val));
                                                                         v->type = param->value->type;
                                                                         // Copy data based on type
@@ -217,6 +225,8 @@ block_statement:
                                                                         param = param->next;
                                                                     }
                                                                 }
+                                                               // print_symbol_table(current_scope);
+
                                                             }
     statement_list 
     '}' 
@@ -821,30 +831,7 @@ atomic:
 
 
 %%
-/* Helper function implementations */
-void print_val(val *v) {
-    if (v == NULL) {
-        printf("NULL");
-        return;
-    }
-    
-    switch (v->type) {
-        case TYPE_INT:
-            printf("%d", v->data.i);
-            break;
-        case TYPE_FLOAT:
-            printf("%f", v->data.f);
-            break;
-        case TYPE_STRING:
-            printf("%s", v->data.s);
-            break;
-        case TYPE_BOOL:
-            printf("%s", v->data.b ? "true" : "false");
-            break;
-        default:
-            printf("unknown");
-    }
-}
+
 
 
 

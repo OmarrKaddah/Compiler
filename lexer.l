@@ -2,6 +2,9 @@
 %{
     #include "val.h"
     #include "parser.tab.h"
+
+   
+    #include "symbol_table.h"
 %}
 
 /* Regex Rules */

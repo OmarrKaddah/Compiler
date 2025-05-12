@@ -82,10 +82,10 @@
      RETURN = 298,
      PRINT = 299,
      STEP = 300,
-     INT_TYPE = 301,
-     FLOAT_TYPE = 302,
-     STRING_TYPE = 303,
-     BOOL_TYPE = 304
+     T_INT = 301,
+     T_FLOAT = 302,
+     T_STRING = 303,
+     T_BOOL = 304
    };
 #endif
 
@@ -96,7 +96,7 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 17 "parser.y"
+#line 24 "parser.y"
 
     int i;
     float f;

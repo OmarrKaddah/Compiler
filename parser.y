@@ -1,9 +1,16 @@
+
+
+
+
 %{
     #include "val.h"
     #include <string.h>
     #include <stdlib.h>
     #include <stdio.h> 
+    #include "symbol_table.h"
 
+    SymbolTable* current_scope = NULL;
+SymbolTable* global_scope = NULL;
 
     void print_val(val *v);
     void free_val(val *v);
@@ -29,6 +36,9 @@
 %token <b> BOOL
 %type <v> expression atomic function_call
 %type <s> assignment_statement print_statement 
+%type <i> type_specifier
+%type <v> argument_list
+
 
 /* Operator tokens */
 %token MINUS PLUS MULTIPLY DIVIDE MOD POWER
@@ -39,7 +49,7 @@
 %token PLUS_EQUAL MINUS_EQUAL TIMES_EQUAL DIVIDE_EQUAL
 %token INCR
 %token IF ELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT STEP
-%token INT_TYPE FLOAT_TYPE STRING_TYPE BOOL_TYPE
+%token T_INT T_FLOAT T_STRING T_BOOL
 
 /* Operator precedence */
 %left OR
@@ -80,8 +90,33 @@ statement:
     ;
 
 function_definition:
-    type_specifier IDENTIFIER '(' parameter_list ')' block_statement
-    | type_specifier IDENTIFIER '(' ')' block_statement
+    type_specifier IDENTIFIER '(' parameter_list ')'               {
+                                                                        // Create function symbol
+                                                                        val* func_val = malloc(sizeof(val));
+                                                                        func_val->type = $1;
+                                                                        insert_symbol(current_scope, $2, func_val, SYM_FUNCTION);
+                                                                        
+                                                                        // Enter function scope
+                                                                        SymbolTable* func_scope = create_symbol_table(current_scope);
+                                                                        current_scope = func_scope;
+                                                                    }
+     block_statement                                                 {
+                                                                            // Exit function scope
+                                                                            current_scope = current_scope->parent;
+                                                                        }
+
+    | type_specifier IDENTIFIER '(' ')'                              {
+                                                                        // Similar handling for no-parameter functions
+                                                                        val* func_val = malloc(sizeof(val));
+                                                                        func_val->type = $1;
+                                                                        insert_symbol(current_scope, $2, func_val, SYM_FUNCTION);
+                                                                        
+                                                                        SymbolTable* func_scope = create_symbol_table(current_scope);
+                                                                        current_scope = func_scope;
+                                                                    }
+     block_statement                                             {
+                                                                            current_scope = current_scope->parent;
+                                                                        }                                                   
     ;
 parameter_list:
     parameter_declaration
@@ -103,15 +138,57 @@ function_call_statement:
                                                             ; */
 
 argument_list:
-    expression
-    | argument_list ',' expression
-    ;
+    expression        { $$ = $1; }
+  | argument_list ',' expression { $$ = $3; }
+  ;
 assignment_statement:
     IDENTIFIER EQUAL expression
+                                            {
+                                            // Lookup variable
+                                            Symbol* sym = lookup_symbol(current_scope, $1);
+                                            if (!sym) {
+                                                yyerror("Undefined variable");
+                                                YYERROR;
+                                            }
+                                            
+                                            // Check if constant
+                                            if (sym->sym_type == SYM_CONSTANT) {
+                                                yyerror("Cannot assign to constant");
+                                                YYERROR;
+                                            }
+                                            
+                                            // Type checking
+                                            if (sym->value->type != $3->type) {
+                                                yyerror("Type mismatch in assignment");
+                                                YYERROR;
+                                            }
+                                            
+                                            // Update value
+                                            switch(sym->value->type) {
+                                                case TYPE_INT: sym->value->data.i = $3->data.i; break;
+                                                case TYPE_FLOAT: sym->value->data.f = $3->data.f; break;
+                                                case TYPE_STRING: 
+                                                    free(sym->value->data.s);
+                                                    sym->value->data.s = strdup($3->data.s);
+                                                    break;
+                                                case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
+                                            }
+                                            free_val($3);
+                                        }
     ;
 
 block_statement:
-    '{' statement_list '}'
+     '{' 
+                                                    {
+                                                        SymbolTable* new_scope = create_symbol_table(current_scope);
+                                                        current_scope = new_scope;
+                                                    }
+     statement_list 
+     '}'
+                                                    {SymbolTable* parent_scope = current_scope->parent;
+                                                    free(current_scope);
+                                                    current_scope = parent_scope;
+                                                    }
     ;
 
 statement_list:
@@ -152,20 +229,64 @@ case_statement:
 
 declaration:
     type_specifier IDENTIFIER
+                                                              {
+                                                                if(is_symbol_in_current_scope(current_scope, $2)) {
+                                                                    yyerror("Variable already declared in this scope");
+                                                                    YYERROR;
+                                                                } else {
+                                                                    val* v = malloc(sizeof(val));
+                                                                    v->type = $1;
+                                                                    switch($1) {
+                                                                        case TYPE_INT: v->data.i = 0; break;
+                                                                        case TYPE_FLOAT: v->data.f = 0.0f; break;
+                                                                        case TYPE_STRING: v->data.s = strdup(""); break;
+                                                                        case TYPE_BOOL: v->data.b = 0; break;
+                                                                    }
+                                                                    
+                                                                    insert_symbol(current_scope, $2, v,SYM_VARIABLE);
+                                                                }
+                                                              }
     | type_specifier IDENTIFIER EQUAL expression
+                                                                {
+                                                                    // Type checking
+                                                                    if ($1 != $4->type) {
+                                                                        yyerror("Type mismatch in initialization");
+                                                                        YYERROR;
+                                                                    }
+                                                                    
+                                                                    // Insert symbol
+                                                                    if (is_symbol_in_current_scope(current_scope, $2)) {
+                                                                        yyerror("Variable already declared");
+                                                                        YYERROR;
+                                                                    }
+                                                                    insert_symbol(current_scope, $2, $4,SYM_VARIABLE);
+                                                                }
     | CONST type_specifier IDENTIFIER EQUAL expression
+                                                                {
+                                                                    if ($2 != $5->type) {
+                                                                        yyerror("Type mismatch in constant initialization");
+                                                                        YYERROR;
+                                                                    }
+                                                                    if (is_symbol_in_current_scope(current_scope, $3)) {
+                                                                        yyerror("Constant already declared");
+                                                                        YYERROR;
+                                                                    }
+                                                                    insert_symbol(current_scope, $3, $5, SYM_CONSTANT);
+                                                                }
+
     ;
 
 type_specifier:
-    INT_TYPE
-    | FLOAT_TYPE
-    | STRING_TYPE
-    | BOOL_TYPE
-    ;
+    T_INT    { $$ = TYPE_INT; }
+  | T_FLOAT  { $$ = TYPE_FLOAT; }
+  | T_STRING { $$ = TYPE_STRING; }
+  | T_BOOL   { $$ = TYPE_BOOL; }
+  ;
+
 
 return_statement:
-    RETURN ';'
-    | RETURN expression ';'
+    RETURN ';' 
+    | RETURN expression ';'   
     ;
 
 break_statement:
@@ -177,10 +298,10 @@ continue_statement:
     ;
 
 print_statement:
-                                                                      PRINT '(' expression ')' ';' {
+    PRINT '(' expression ')' ';'                                               
 
 
-                                                                          switch ($3->type) {
+                                                                         { switch ($3->type) {
                                                                               case TYPE_INT:
                                                                                   printf("%d\n", $3->data.i);
                                                                                   break;
@@ -542,62 +663,80 @@ expression:
                                                                                 $$->data.f = $1->data.f++;
                                                                             }
                                                                         }
-                                                                            | expression MOD expression %prec MOD
-        {
-            if ($3->type == TYPE_INT && $3->data.i == 0) {
-                yyerror("Modulus by zero");
-            } else if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = $1->data.i % $3->data.i;
-            } else {
-                yyerror("Modulus requires integer operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = 0;
-            }
-        }
+   | expression MOD expression %prec MOD
+                                                                        {
+                                                                            if ($3->type == TYPE_INT && $3->data.i == 0) {
+                                                                                yyerror("Modulus by zero");
+                                                                            } else if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = $1->data.i % $3->data.i;
+                                                                            } else {
+                                                                                yyerror("Modulus requires integer operands");
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+                                                                                $$->data.i = 0;
+                                                                            }
+                                                                        }
     | expression POWER expression %prec POWER
-        {
-            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                $$ = malloc(sizeof(val));
-                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
-                    $$->type = TYPE_FLOAT;
-                    float base = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                    float exponent = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                    $$->data.f = powf(base, exponent);
-                } else {
-                    $$->type = TYPE_INT;
-                    // Simple integer power (won't handle negative exponents well)
-                    int result = 1;
-                    for (int i = 0; i < $3->data.i; i++) {
-                        result *= $1->data.i;
-                    }
-                    $$->data.i = result;
-                }
-            } else {
-                yyerror("Power operation requires numeric operands");
-                $$ = malloc(sizeof(val));
-                $$->type = TYPE_INT;
-                $$->data.i = 0;
-            }
-        }
+                                                                    {
+                                                                        if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                            ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                            $$ = malloc(sizeof(val));
+                                                                            if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                $$->type = TYPE_FLOAT;
+                                                                                float base = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                float exponent = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                $$->data.f = powf(base, exponent);
+                                                                            } else {
+                                                                                $$->type = TYPE_INT;
+                                                                                // Simple integer power (won't handle negative exponents well)
+                                                                                int result = 1;
+                                                                                for (int i = 0; i < $3->data.i; i++) {
+                                                                                    result *= $1->data.i;
+                                                                                }
+                                                                                $$->data.i = result;
+                                                                            }
+                                                                        } else {
+                                                                            yyerror("Power operation requires numeric operands");
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = TYPE_INT;
+                                                                            $$->data.i = 0;
+                                                                        }
+                                                                    }
     | '(' expression ')'
                                                                         {
                                                                             $$ = $2;
                                                                         }
                                                                     ;
 function_call:
-     IDENTIFIER '(' argument_list ')'                                    {
-                                                                            // Here you would implement function call logic
-                                                                            // For now, just return the first argument as an example
-                                                                            // $$ = $3;
+     IDENTIFIER '(' argument_list ')'                                   
+                                                                        {
+                                                                            // Lookup function
+                                                                            Symbol* func = lookup_symbol(current_scope, $1);
+                                                                            if (!func || func->sym_type != SYM_FUNCTION) {
+                                                                                yyerror("Undefined function");
+                                                                                YYERROR;
+                                                                            }
+                                                                            // For now just return first argument
+                                                                            $$ = $3;
                                                                         }
-     | IDENTIFIER '(' ')'                                               {
-                                                                            // $$ = malloc(sizeof(val));
-                                                                            // $$->type = TYPE_INT;
-                                                                            // $$->data.i = 0; // Default return for no-arg functions
+     | IDENTIFIER '(' ')'                                               
+                                                                        {
+                                                                            Symbol* func = lookup_symbol(current_scope, $1);
+                                                                            if (!func || func->sym_type != SYM_FUNCTION) {
+                                                                                yyerror("Undefined function");
+                                                                                YYERROR;
+                                                                            }
+                                                                            // Return default value
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = func->value->type;
+                                                                            switch($$->type) {
+                                                                                case TYPE_INT: $$->data.i = 0; break;
+                                                                                case TYPE_FLOAT: $$->data.f = 0.0f; break;
+                                                                                case TYPE_STRING: $$->data.s = strdup(""); break;
+                                                                                case TYPE_BOOL: $$->data.b = 0; break;
+                                                                            }
                                                                         }
                                                                         ;
 atomic:
@@ -627,11 +766,22 @@ atomic:
                                                                         }
     | IDENTIFIER
                                                                         {
+                                                                            Symbol* sym = lookup_symbol(current_scope, $1);
+                                                                            if (!sym) {
+                                                                                yyerror("Undefined variable");
+                                                                                YYERROR;
+                                                                            }
+                                                                            // Create a copy of the value
                                                                             $$ = malloc(sizeof(val));
-                                                                            $$->type = TYPE_STRING;
-                                                                            $$->data.s = $1;
+                                                                            memcpy($$, sym->value, sizeof(val));
+                                                                            if ($$->type == TYPE_STRING) {
+                                                                                $$->data.s = strdup(sym->value->data.s);
+                                                                            }
                                                                         }
+                                                                
+                                                                   
                                                                     ;
+
 
 %%
 /* Helper function implementations */
@@ -659,14 +809,7 @@ void print_val(val *v) {
     }
 }
 
-void free_val(val *v) {
-    if (v == NULL) return;
-    
-    if (v->type == TYPE_STRING && v->data.s != NULL) {
-        free(v->data.s);
-    }
-    free(v);
-}
+
 
 void yyerror(const char* s) {
     fprintf(stderr, "Error: %s\n", s);
@@ -674,5 +817,18 @@ void yyerror(const char* s) {
 
 
 int main() {
-    return yyparse();
+    global_scope = create_symbol_table(NULL);
+    current_scope = global_scope;
+    
+    // Add built-in functions
+    val* print_val = malloc(sizeof(val));
+    print_val->type = TYPE_INT; // Dummy type
+    insert_symbol(global_scope, "print", print_val, SYM_FUNCTION);
+    
+    int result = yyparse();
+    
+    // Clean up global scope
+    free_symbol_table(global_scope);
+    return result;
 }
+

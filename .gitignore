@@ -1,34 +1,28 @@
 # Build artifacts
-
-\*.o
-\*.obj
-\*.exe
+*.o
+*.obj
+*.exe
 compiler
 
 # Flex/Bison generated files
-
 lex.yy.c
 parser.tab.c
 parser.tab.h
 
 # Temporary files
-
-\*\~
-\*.swp
-\*.tmp
-\*.log
+*~
+*.swp
+*.tmp
+*.log
 
 # Symbol and debug files
-
-\*.dSYM/
-\*.sym
+*.dSYM/
+*.sym
 
 # IDE directories
-
 .vscode/
 .idea/
 
 # OS files
-
-.DS\_Store
+.DS_Store
 Thumbs.db

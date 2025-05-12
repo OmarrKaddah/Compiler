@@ -198,7 +198,33 @@ statement_list:
 
 if_statement:
     IF '(' expression ')' block_statement
+    {
+        if ($3->type != TYPE_BOOL) {
+            yyerror("Condition in if statement must be boolean");
+            YYERROR;
+        }
+        if ($3->data.b )
+        {
+            printf("Condition is true");
+        }
+        free($3);
+    }
     | IF '(' expression ')' block_statement ELSE block_statement
+    {
+        if ($3->type != TYPE_BOOL) {
+            yyerror("Condition in if statement must be boolean");
+            YYERROR;
+        }
+        if ($3->data.b )
+        {
+            printf("Condition is true");
+        }
+        else
+        {
+            printf("Condition is false");
+        }
+        free($3);
+    }
     ;
 
 while_statement:

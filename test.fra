@@ -1,15 +1,6 @@
-
-
-rakam easy(){
-    raga3 8;
+rakam x = 6;
+law (x<5){
+    x = x + 5;
+    etba3(x);
 }
-
-rakam x= 8;
-
-etba3("x=");
 etba3(x);
-rakam y=8+4;
-{
-   rakam y=5;
-}
-etba3(y);

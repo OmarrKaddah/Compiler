@@ -9,8 +9,12 @@
     #include <stdio.h> 
     #include "symbol_table.h"
 
+
+
     SymbolTable* current_scope = NULL;
-SymbolTable* global_scope = NULL;
+    SymbolTable* global_scope = NULL;
+    Parameter *current_params = NULL; // Global tracker for parameters
+    Symbol *last_symbol_inserted=NULL;
 
     void print_val(val *v);
     void free_val(val *v);
@@ -27,6 +31,7 @@ SymbolTable* global_scope = NULL;
     char* s;
     int b; 
     val *v;
+    Parameter *p;
 }
 
 /* Token declarations */
@@ -38,7 +43,7 @@ SymbolTable* global_scope = NULL;
 %type <s> assignment_statement print_statement 
 %type <i> type_specifier
 %type <v> argument_list
-
+%type <p> parameter_list parameter_declaration
 
 /* Operator tokens */
 %token MINUS PLUS MULTIPLY DIVIDE MOD POWER
@@ -90,40 +95,51 @@ statement:
     ;
 
 function_definition:
-    type_specifier IDENTIFIER '(' parameter_list ')'               {
-                                                                        // Create function symbol
-                                                                        val* func_val = malloc(sizeof(val));
-                                                                        func_val->type = $1;
-                                                                        insert_symbol(current_scope, $2, func_val, SYM_FUNCTION);
-                                                                        
-                                                                        // Enter function scope
-                                                                        SymbolTable* func_scope = create_symbol_table(current_scope);
-                                                                        current_scope = func_scope;
-                                                                    }
-     block_statement                                                 {
-                                                                            // Exit function scope
-                                                                            current_scope = current_scope->parent;
-                                                                        }
+    type_specifier IDENTIFIER '(' parameter_list ')' 
+        {
+            val *func_val = malloc(sizeof(val));
+            func_val->type = $1;
+
+            // Count parameters
+            int param_count = 0;
+            Parameter *p = $4;
+            while (p) { param_count++; p = p->next; }
+
+            // Insert function with parameters
+            last_symbol_inserted = insert_symbol(current_scope, $2, func_val, SYM_FUNCTION, param_count, $4);
+            current_params = $4; // Store for block_statement
+        }
+    block_statement                        { current_params = NULL; } // Reset
+    
 
     | type_specifier IDENTIFIER '(' ')'                              {
                                                                         // Similar handling for no-parameter functions
                                                                         val* func_val = malloc(sizeof(val));
                                                                         func_val->type = $1;
-                                                                        insert_symbol(current_scope, $2, func_val, SYM_FUNCTION);
+                                                                        last_symbol_inserted=insert_symbol(current_scope, $2, func_val, SYM_FUNCTION,0,NULL);
                                                                         
-                                                                        SymbolTable* func_scope = create_symbol_table(current_scope);
-                                                                        current_scope = func_scope;
+                                                                        
                                                                     }
-     block_statement                                             {
-                                                                            current_scope = current_scope->parent;
-                                                                        }                                                   
-    ;
-parameter_list:
-    parameter_declaration
-    | parameter_list ',' parameter_declaration
+     block_statement                                             {    }                                                   
     ;
 parameter_declaration:
     type_specifier IDENTIFIER
+        {
+            val *v = malloc(sizeof(val));
+            v->type = $1;
+            switch ($1) { // Initialize default value
+                case TYPE_INT: v->data.i = 0; break;
+                case TYPE_FLOAT: v->data.f = 0.0f; break;
+                case TYPE_STRING: v->data.s = strdup(""); break;
+                case TYPE_BOOL: v->data.b = 0; break;
+            }
+            $$ = create_param($2, v);
+        }
+    ;
+
+parameter_list:
+    parameter_declaration                  { $$ = $1; }
+    | parameter_list ',' parameter_declaration { $$ = append_param($1, $3); }
     ;
 function_call_statement:
     IDENTIFIER '(' argument_list ')'                        //{
@@ -178,17 +194,38 @@ assignment_statement:
     ;
 
 block_statement:
-     '{' 
-                                                    {
-                                                        SymbolTable* new_scope = create_symbol_table(current_scope);
-                                                        current_scope = new_scope;
-                                                    }
-     statement_list 
-     '}'
-                                                    {SymbolTable* parent_scope = current_scope->parent;
-                                                    free(current_scope);
-                                                    current_scope = parent_scope;
-                                                    }
+    '{' 
+                                                            {
+                                                                // Create new scope
+                                                                SymbolTable* new_scope = create_symbol_table(current_scope);
+                                                                current_scope = new_scope;
+
+                                                                // Add parameters to the new scope
+                                                                if (current_params) {
+                                                                    Parameter *param = current_params;
+                                                                    while (param) {
+                                                                        val *v = malloc(sizeof(val));
+                                                                        v->type = param->value->type;
+                                                                        // Copy data based on type
+                                                                        switch (v->type) {
+                                                                            case TYPE_INT:    v->data.i = param->value->data.i; break;
+                                                                            case TYPE_FLOAT:  v->data.f = param->value->data.f; break;
+                                                                            case TYPE_STRING: v->data.s = strdup(param->value->data.s); break;
+                                                                            case TYPE_BOOL:   v->data.b = param->value->data.b; break;
+                                                                        }
+                                                                        insert_symbol(current_scope, param->name, v, SYM_VARIABLE,0,NULL);
+                                                                        param = param->next;
+                                                                    }
+                                                                }
+                                                            }
+    statement_list 
+    '}' 
+                                                        {
+                                                            // Cleanup scope
+                                                            SymbolTable* parent_scope = current_scope->parent;
+                                                            free_symbol_table(current_scope);
+                                                            current_scope = parent_scope;
+                                                        }
     ;
 
 statement_list:
@@ -243,7 +280,7 @@ declaration:
                                                                         case TYPE_BOOL: v->data.b = 0; break;
                                                                     }
                                                                     
-                                                                    insert_symbol(current_scope, $2, v,SYM_VARIABLE);
+                                                                    last_symbol_inserted=insert_symbol(current_scope, $2, v,SYM_VARIABLE,0,NULL);
                                                                 }
                                                               }
     | type_specifier IDENTIFIER EQUAL expression
@@ -259,7 +296,7 @@ declaration:
                                                                         yyerror("Variable already declared");
                                                                         YYERROR;
                                                                     }
-                                                                    insert_symbol(current_scope, $2, $4,SYM_VARIABLE);
+                                                                    last_symbol_inserted=insert_symbol(current_scope, $2, $4,SYM_VARIABLE,0,NULL);
                                                                 }
     | CONST type_specifier IDENTIFIER EQUAL expression
                                                                 {
@@ -271,7 +308,7 @@ declaration:
                                                                         yyerror("Constant already declared");
                                                                         YYERROR;
                                                                     }
-                                                                    insert_symbol(current_scope, $3, $5, SYM_CONSTANT);
+                                                                    last_symbol_inserted=insert_symbol(current_scope, $3, $5, SYM_CONSTANT,0,NULL);
                                                                 }
 
     ;
@@ -819,11 +856,14 @@ void yyerror(const char* s) {
 int main() {
     global_scope = create_symbol_table(NULL);
     current_scope = global_scope;
+    Symbol *last_symbol_inserted=NULL;
+    Parameter *parameter_head=NULL ;
+    
     
     // Add built-in functions
     val* print_val = malloc(sizeof(val));
     print_val->type = TYPE_INT; // Dummy type
-    insert_symbol(global_scope, "print", print_val, SYM_FUNCTION);
+    last_symbol_inserted=insert_symbol(global_scope, "print", print_val, SYM_FUNCTION,0,NULL);
     
     int result = yyparse();
     

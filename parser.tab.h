@@ -96,18 +96,19 @@ typedef union YYSTYPE
 {
 
 /* Line 1676 of yacc.c  */
-#line 24 "parser.y"
+#line 28 "parser.y"
 
     int i;
     float f;
     char* s;
     int b; 
     val *v;
+    Parameter *p;
 
 
 
 /* Line 1676 of yacc.c  */
-#line 111 "parser.tab.h"
+#line 112 "parser.tab.h"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */

@@ -1,7 +1,14 @@
 
 rakam easy(rakam x){
     etba3(x);
-    {rakam x;}
+    #{rakam x;}
    
 }
-
+easy(5)
+rakam hello(rakam h, rakam f){}
+{ 
+    rakam h;
+    {
+        rakam h;
+    }
+}

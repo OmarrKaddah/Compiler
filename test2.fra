@@ -1,14 +1,9 @@
+rakam x=0;
+rakam easy(rakam a, rakam b){
+    etba3("hi");
+    x=a+b;
 
-rakam easy(rakam x){
-    etba3(x);
-    #{rakam x;}
-   
 }
-easy(5)
-rakam hello(rakam h, rakam f){}
-{ 
-    rakam h;
-    {
-        rakam h;
-    }
-}
+easy(1,3);
+
+etba3(x);

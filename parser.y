@@ -8,7 +8,9 @@
     #include <stdlib.h>
     #include <stdio.h> 
     #include "symbol_table.h"
-
+     val* create_default_value(Type type);
+    void print_val(val *v);
+    void free_val(val *v);
     /* track current line number */
     extern int yylineno;
     extern char *yytext;
@@ -51,7 +53,7 @@
 %type <v> expression atomic function_call
 %type <s> assignment_statement print_statement 
 %type <i> type_specifier
-%type <v> argument_list
+%type <p> argument_list
 %type <p> parameter_list parameter_declaration
 
 /* Operator tokens */
@@ -156,19 +158,120 @@ parameter_list:
     | parameter_list ',' parameter_declaration { $$ = append_param($1, $3); }
     ;
 function_call_statement:
-    IDENTIFIER '(' argument_list ')'                        {
-                                                                
-                                                            } 
-    | IDENTIFIER '(' ')'
-                                                            /* {
-                                                                $$.name = $1;
-                                                                $$.value = NULL;
-                                                            }
-                                                            ; */
+                                                                IDENTIFIER '(' argument_list ')'                        {
+                                                                    Symbol* func = lookup_symbol(current_scope, $1);
+                                                                    if (!func || func->sym_type != SYM_FUNCTION) {
+                                                                        yyerror("Undefined function");
+                                                                        YYERROR;
+                                                                    }
+
+                                                                    // Count arguments
+                                                                    int arg_count = 0;
+                                                                    Parameter *arg = $3;
+                                                                    while (arg) { arg_count++; arg = arg->next; }
+
+                                                                    // Validate parameter count
+                                                                    if (arg_count != func->param_count) {
+                                                                        yyerror("Argument count mismatch");
+                                                                        YYERROR;
+                                                                    }
+
+                                                                    // Reverse argument list to match parameter order
+                                                                    Parameter *reversed_args = NULL;
+                                                                    Parameter *current = $3;
+                                                                    while (current) {
+                                                                        Parameter *next = current->next;
+                                                                        current->next = reversed_args;
+                                                                        reversed_args = current;
+                                                                        current = next;
+                                                                    }
+
+                                                                    // Type checking and argument processing
+                                                                    Parameter *param = func->params;
+                                                                    Parameter *arg_iter = reversed_args;
+                                                                    while (param && arg_iter) {
+                                                                        // Handle implicit type conversions
+                                                                        if (param->value->type == TYPE_INT && arg_iter->value->type == TYPE_FLOAT) {
+                                                                            arg_iter->value->type = TYPE_INT;
+                                                                            arg_iter->value->data.i = (int)arg_iter->value->data.f;
+                                                                        }
+                                                                        else if (param->value->type == TYPE_FLOAT && arg_iter->value->type == TYPE_INT) {
+                                                                            arg_iter->value->type = TYPE_FLOAT;
+                                                                            arg_iter->value->data.f = (float)arg_iter->value->data.i;
+                                                                        }
+                                                                        else if (param->value->type != arg_iter->value->type) {
+                                                                            yyerror("Argument type mismatch");
+                                                                            YYERROR;
+                                                                        }
+                                                                        
+                                                                        // Copy argument value to parameter
+                                                                        switch (param->value->type) {
+                                                                            case TYPE_INT:
+                                                                                param->value->data.i = arg_iter->value->data.i;
+                                                                                break;
+                                                                            case TYPE_FLOAT:
+                                                                                param->value->data.f = arg_iter->value->data.f;
+                                                                                break;
+                                                                            case TYPE_STRING:
+                                                                                free(param->value->data.s);
+                                                                                param->value->data.s = strdup(arg_iter->value->data.s);
+                                                                                break;
+                                                                            case TYPE_BOOL:
+                                                                                param->value->data.b = arg_iter->value->data.b;
+                                                                                break;
+                                                                        }
+                                                                        
+                                                                        param = param->next;
+                                                                        arg_iter = arg_iter->next;
+                                                                    }
+
+                                                                    // Free arguments (values and nodes)
+                                                                    while (reversed_args) {
+                                                                        Parameter *tmp = reversed_args;
+                                                                        reversed_args = reversed_args->next;
+                                                                        free_val(tmp->value);
+                                                                        free(tmp);
+                                                                    }
+                                                                   
+
+                                                                    // TODO: Here you would normally execute the function body
+                                                                    // For now, we'll just print that the function was called
+                                                                    printf("Called function: %s\n", $1);
+                                                                } 
+    | IDENTIFIER '(' ')' {
+                                                                    Symbol* func = lookup_symbol(current_scope, $1);
+                                                                    if (!func || func->sym_type != SYM_FUNCTION) {
+                                                                        yyerror("Undefined function");
+                                                                        YYERROR;
+                                                                    }
+
+                                                                    if (func->param_count != 0) {
+                                                                        yyerror("Function expects parameters");
+                                                                        YYERROR;
+                                                                    }
+
+                                                                    // TODO: Here you would normally execute the function body
+                                                                    // For now, we'll just print that the function was called
+                                                                    printf("Called function: %s\n", $1);
+                                                                }
+;
 
 argument_list:
-    expression        { $$ = $1; }
-  | argument_list ',' expression { $$ = $3; }
+    expression        
+                                                            {   Parameter *p = malloc(sizeof(Parameter));
+                                                                p->name = NULL; // Arguments don't have names
+                                                                p->value = $1;
+                                                                p->next = NULL;
+                                                                $$ = p;     
+                                                            }
+  | argument_list ',' expression 
+                                                            { 
+                                                                Parameter *p = malloc(sizeof(Parameter));
+                                                                p->name = NULL;
+                                                                p->value = $3;
+                                                                p->next = $1;  // Build list in reverse order
+                                                                $$ = p; 
+                                                            }
   ;
 assignment_statement:
     IDENTIFIER EQUAL expression
@@ -763,35 +866,100 @@ expression:
                                                                         }
                                                                     ;
 function_call:
-     IDENTIFIER '(' argument_list ')'                                   
-                                                                        {
-                                                                            // Lookup function
-                                                                            Symbol* func = lookup_symbol(current_scope, $1);
-                                                                            if (!func || func->sym_type != SYM_FUNCTION) {
-                                                                                yyerror("Undefined function");
-                                                                                YYERROR;
-                                                                            }
-                                                                            // For now just return first argument
-                                                                            $$ = $3;
+    IDENTIFIER '(' argument_list ')'                                   
+                                                                {
+                                                                    Symbol* func = lookup_symbol(current_scope, $1);
+                                                                    if (!func || func->sym_type != SYM_FUNCTION) {
+                                                                        yyerror("Undefined function");
+                                                                        YYERROR;
+                                                                    }
+
+                                                                    // Count arguments
+                                                                    int arg_count = 0;
+                                                                    Parameter *arg = $3;
+                                                                    while (arg) { arg_count++; arg = arg->next; }
+
+                                                                    // Validate parameter count
+                                                                    if (arg_count != func->param_count) {
+                                                                        yyerror("Argument count mismatch");
+                                                                        YYERROR;
+                                                                    }
+
+                                                                    // Reverse argument list to match parameter order
+                                                                    Parameter *reversed_args = NULL;
+                                                                    Parameter *current = $3;
+                                                                    while (current) {
+                                                                        Parameter *next = current->next;
+                                                                        current->next = reversed_args;
+                                                                        reversed_args = current;
+                                                                        current = next;
+                                                                    }
+
+                                                                    // Type checking
+                                                                    Parameter *param = func->params;
+                                                                    Parameter *arg_iter = reversed_args;
+                                                                    while (param && arg_iter) {
+                                                                        if(param->value->type==TYPE_INT && arg_iter->value->type==TYPE_FLOAT){
+                                                                            arg_iter->value->type=TYPE_INT;
+                                                                            arg_iter->value->data.i=(int)arg_iter->value->data.f;
+
                                                                         }
-     | IDENTIFIER '(' ')'                                               
-                                                                        {
-                                                                            Symbol* func = lookup_symbol(current_scope, $1);
-                                                                            if (!func || func->sym_type != SYM_FUNCTION) {
-                                                                                yyerror("Undefined function");
-                                                                                YYERROR;
-                                                                            }
-                                                                            // Return default value
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = func->value->type;
-                                                                            switch($$->type) {
-                                                                                case TYPE_INT: $$->data.i = 0; break;
-                                                                                case TYPE_FLOAT: $$->data.f = 0.0f; break;
-                                                                                case TYPE_STRING: $$->data.s = strdup(""); break;
-                                                                                case TYPE_BOOL: $$->data.b = 0; break;
-                                                                            }
+                                                                        else if(param->value->type==TYPE_FLOAT && arg_iter->value->type==TYPE_INT){
+                                                                            arg_iter->value->type=TYPE_FLOAT;
+                                                                            arg_iter->value->data.f=(float)arg_iter->value->data.i;
+                                                                        }else if (param->value->type != arg_iter->value->type) {
+                                                                            yyerror("Argument type mismatch");
+                                                                            YYERROR;
                                                                         }
-                                                                        ;
+
+                                                                        switch (param->value->type) {
+                                                                            case TYPE_INT:
+                                                                                param->value->data.i = arg_iter->value->data.i;
+                                                                                break;
+                                                                            case TYPE_FLOAT:
+                                                                                param->value->data.f = arg_iter->value->data.f;
+                                                                                break;
+                                                                            case TYPE_STRING:
+                                                                                free(param->value->data.s);
+                                                                                param->value->data.s = strdup(arg_iter->value->data.s);
+                                                                                break;
+                                                                            case TYPE_BOOL:
+                                                                                param->value->data.b = arg_iter->value->data.b;
+                                                                                break;
+                                                                        }
+
+                                                                        param = param->next;
+                                                                        arg_iter = arg_iter->next;
+                                                                    }
+
+                                                                    // Free arguments (values and nodes)
+                                                                    while (reversed_args) {
+                                                                        Parameter *tmp = reversed_args;
+                                                                        reversed_args = reversed_args->next;
+                                                                        free_val(tmp->value);
+                                                                        free(tmp);
+                                                                    }
+
+                                                                    // Return default value (temporary)
+                                                                    //TODO: Implement actual function call
+                                                                    $$ = create_default_value(func->value->type);
+                                                                }
+    | IDENTIFIER '(' ')'                                               
+                                                                {
+                                                                    Symbol* func = lookup_symbol(current_scope, $1);
+                                                                    if (!func || func->sym_type != SYM_FUNCTION) {
+                                                                        yyerror("Undefined function");
+                                                                        YYERROR;
+                                                                    }
+
+                                                                    if (func->param_count != 0) {
+                                                                        yyerror("Function expects parameters");
+                                                                        YYERROR;
+                                                                    }
+                                                                    //TODO: Implement actual function call
+                                                                    $$ = create_default_value(func->value->type);
+                                                                }
+    ;
 atomic:
     INT
                                                                         {
@@ -848,31 +1016,18 @@ void yyerror(const char* s) {
             "Syntax error at line %d: %s near ‘%s’\n",
             yylineno, s, yytext);
 }
-/* Helper function implementations */
-/* void print_val(val *v) {
-    if (v == NULL) {
-        printf("NULL");
-        return;
-    }
-    
-    switch (v->type) {
-        case TYPE_INT:
-            printf("%d", v->data.i);
-            break;
-        case TYPE_FLOAT:
-            printf("%f", v->data.f);
-            break;
-        case TYPE_STRING:
-            printf("%s", v->data.s);
-            break;
-        case TYPE_BOOL:
-            printf("%s", v->data.b ? "true" : "false");
-            break;
-        default:
-            printf("unknown");
-    }
-} */
 
+val* create_default_value(Type type) {
+    val *v = malloc(sizeof(val));
+    v->type = type;
+    switch (type) {
+        case TYPE_INT:    v->data.i = 0; break;
+        case TYPE_FLOAT:  v->data.f = 0.0f; break;
+        case TYPE_STRING: v->data.s = strdup(""); break;
+        case TYPE_BOOL:   v->data.b = 0; break;
+    }
+    return v;
+}
 
 
 int main() {

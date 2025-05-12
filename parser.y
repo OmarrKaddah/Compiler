@@ -9,7 +9,9 @@
     #include <stdio.h> 
     #include "symbol_table.h"
 
-
+    /* track current line number */
+    extern int yylineno;
+    extern char *yytext;
 
     SymbolTable* current_scope = NULL;
     SymbolTable* global_scope = NULL;
@@ -28,6 +30,9 @@
 }
 
 
+/* --- Enable verbose, “unexpected X, expecting Y…” messages --- */
+%define parse.error verbose
+%error-verbose
 
 %union {
     int i;
@@ -96,6 +101,8 @@ statement:
     | print_statement
     | block_statement
     | function_call_statement ';'
+    /* syntax‐error recovery: skip bad statement up to next ';' */
+    | error ';'                { yyerror("Skipping invalid statement"); yyerrok; }
     ;
 
 function_definition:
@@ -831,13 +838,42 @@ atomic:
 
 
 %%
-
-
-
+/* track line numbers in your lexer (lexer.l):
+     \n   { ++yylineno; return '\n'; }
+*/
+int yylineno = 1;
 
 void yyerror(const char* s) {
-    fprintf(stderr, "Error: %s\n", s);
+    extern char *yytext;
+    fprintf(stderr,
+            "Syntax error at line %d: %s near ‘%s’\n",
+            yylineno, s, yytext);
 }
+/* Helper function implementations */
+void print_val(val *v) {
+    if (v == NULL) {
+        printf("NULL");
+        return;
+    }
+    
+    switch (v->type) {
+        case TYPE_INT:
+            printf("%d", v->data.i);
+            break;
+        case TYPE_FLOAT:
+            printf("%f", v->data.f);
+            break;
+        case TYPE_STRING:
+            printf("%s", v->data.s);
+            break;
+        case TYPE_BOOL:
+            printf("%s", v->data.b ? "true" : "false");
+            break;
+        default:
+            printf("unknown");
+    }
+}
+
 
 
 int main() {

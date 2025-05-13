@@ -1,5 +1,6 @@
 rakam x=2+3;
-
+x=5;
+x=4+5;
 rakam easy(rakam f){
 
 }

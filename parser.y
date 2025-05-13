@@ -340,7 +340,7 @@ assignment_statement:
                                                     break;
                                                 case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
                                             }
-                                            add_quad("ASSIGN",$3->place,"",$1)
+                                            add_quad("ASSIGN",$3->place,"",$1);
                                             free_val($3);
                                         }
     ;

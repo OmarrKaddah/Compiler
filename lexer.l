@@ -107,7 +107,7 @@
 "etba3"                                         { return PRINT; } // print
 
 [a-zA-Z_][a-zA-Z0-9_]*                          { yylval.s = strdup(yytext); return IDENTIFIER; }
-[ \t]+                                          { /* Ignore whitespace */ }
+[ \t\n]+                                          { /* Ignore whitespace */ }
 
 .                                               { 
     fprintf(stderr, "Unrecognized token: %s\n", yytext); 

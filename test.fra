@@ -3,3 +3,8 @@ le7ad(rakam i = 0; i < 3; khatwa = 1)
     etba3(i);
     rakam x ;
 }
+
+rakam h;
+etba3(h);
+
+

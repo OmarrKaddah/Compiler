@@ -1,0 +1,5 @@
+bool a = true;
+bool b = false;
+etba3(a && b);
+etba3(a || b);
+etba3(!a);

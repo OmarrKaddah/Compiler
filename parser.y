@@ -162,102 +162,110 @@ parameter_list:
     | parameter_list ',' parameter_declaration { $$ = append_param($1, $3); }
     ;
 function_call_statement:
-                                                                IDENTIFIER '(' argument_list ')'                        {
-                                                                    Symbol* func = lookup_symbol(current_scope, $1);
-                                                                    if (!func || func->sym_type != SYM_FUNCTION) {
-                                                                        yyerror("Undefined function");
-                                                                        YYERROR;
-                                                                    }
+    IDENTIFIER '(' argument_list ')'                        
+    {
+        Symbol* func = lookup_symbol(current_scope, $1);
+        if (!func || func->sym_type != SYM_FUNCTION) {
+            yyerror("Undefined function");
+            YYERROR;
+        }
 
-                                                                    // Count arguments
-                                                                    int arg_count = 0;
-                                                                    Parameter *arg = $3;
-                                                                    while (arg) { arg_count++; arg = arg->next; }
+        // Mark the function as used
+        func->is_used = true;
 
-                                                                    // Validate parameter count
-                                                                    if (arg_count != func->param_count) {
-                                                                        yyerror("Argument count mismatch");
-                                                                        YYERROR;
-                                                                    }
+        // Count arguments
+        int arg_count = 0;
+        Parameter *arg = $3;
+        while (arg) { arg_count++; arg = arg->next; }
 
-                                                                    // Reverse argument list to match parameter order
-                                                                    Parameter *reversed_args = NULL;
-                                                                    Parameter *current = $3;
-                                                                    while (current) {
-                                                                        Parameter *next = current->next;
-                                                                        current->next = reversed_args;
-                                                                        reversed_args = current;
-                                                                        current = next;
-                                                                    }
+        // Validate parameter count
+        if (arg_count != func->param_count) {
+            yyerror("Argument count mismatch");
+            YYERROR;
+        }
 
-                                                                    // Type checking and argument processing
-                                                                    Parameter *param = func->params;
-                                                                    Parameter *arg_iter = reversed_args;
-                                                                    while (param && arg_iter) {
-                                                                        // Handle implicit type conversions
-                                                                        if (param->value->type == TYPE_INT && arg_iter->value->type == TYPE_FLOAT) {
-                                                                            arg_iter->value->type = TYPE_INT;
-                                                                            arg_iter->value->data.i = (int)arg_iter->value->data.f;
-                                                                        }
-                                                                        else if (param->value->type == TYPE_FLOAT && arg_iter->value->type == TYPE_INT) {
-                                                                            arg_iter->value->type = TYPE_FLOAT;
-                                                                            arg_iter->value->data.f = (float)arg_iter->value->data.i;
-                                                                        }
-                                                                        else if (param->value->type != arg_iter->value->type) {
-                                                                            yyerror("Argument type mismatch");
-                                                                            YYERROR;
-                                                                        }
-                                                                        
-                                                                        // Copy argument value to parameter
-                                                                        switch (param->value->type) {
-                                                                            case TYPE_INT:
-                                                                                param->value->data.i = arg_iter->value->data.i;
-                                                                                break;
-                                                                            case TYPE_FLOAT:
-                                                                                param->value->data.f = arg_iter->value->data.f;
-                                                                                break;
-                                                                            case TYPE_STRING:
-                                                                                free(param->value->data.s);
-                                                                                param->value->data.s = strdup(arg_iter->value->data.s);
-                                                                                break;
-                                                                            case TYPE_BOOL:
-                                                                                param->value->data.b = arg_iter->value->data.b;
-                                                                                break;
-                                                                        }
-                                                                        
-                                                                        param = param->next;
-                                                                        arg_iter = arg_iter->next;
-                                                                    }
+        // Reverse argument list to match parameter order
+        Parameter *reversed_args = NULL;
+        Parameter *current = $3;
+        while (current) {
+            Parameter *next = current->next;
+            current->next = reversed_args;
+            reversed_args = current;
+            current = next;
+        }
 
-                                                                    // Free arguments (values and nodes)
-                                                                    while (reversed_args) {
-                                                                        Parameter *tmp = reversed_args;
-                                                                        reversed_args = reversed_args->next;
-                                                                        free_val(tmp->value);
-                                                                        free(tmp);
-                                                                    }
-                                                                   
+        // Type checking and argument processing
+        Parameter *param = func->params;
+        Parameter *arg_iter = reversed_args;
+        while (param && arg_iter) {
+            // Handle implicit type conversions
+            if (param->value->type == TYPE_INT && arg_iter->value->type == TYPE_FLOAT) {
+                arg_iter->value->type = TYPE_INT;
+                arg_iter->value->data.i = (int)arg_iter->value->data.f;
+            }
+            else if (param->value->type == TYPE_FLOAT && arg_iter->value->type == TYPE_INT) {
+                arg_iter->value->type = TYPE_FLOAT;
+                arg_iter->value->data.f = (float)arg_iter->value->data.i;
+            }
+            else if (param->value->type != arg_iter->value->type) {
+                yyerror("Argument type mismatch");
+                YYERROR;
+            }
+            
+            // Copy argument value to parameter
+            switch (param->value->type) {
+                case TYPE_INT:
+                    param->value->data.i = arg_iter->value->data.i;
+                    break;
+                case TYPE_FLOAT:
+                    param->value->data.f = arg_iter->value->data.f;
+                    break;
+                case TYPE_STRING:
+                    free(param->value->data.s);
+                    param->value->data.s = strdup(arg_iter->value->data.s);
+                    break;
+                case TYPE_BOOL:
+                    param->value->data.b = arg_iter->value->data.b;
+                    break;
+            }
+            
+            param = param->next;
+            arg_iter = arg_iter->next;
+        }
 
-                                                                    // TODO: Here you would normally execute the function body
-                                                                    // For now, we'll just print that the function was called
-                                                                    printf("Called function: %s\n", $1);
-                                                                } 
-    | IDENTIFIER '(' ')' {
-                                                                    Symbol* func = lookup_symbol(current_scope, $1);
-                                                                    if (!func || func->sym_type != SYM_FUNCTION) {
-                                                                        yyerror("Undefined function");
-                                                                        YYERROR;
-                                                                    }
+        // Free arguments (values and nodes)
+        while (reversed_args) {
+            Parameter *tmp = reversed_args;
+            reversed_args = reversed_args->next;
+            free_val(tmp->value);
+            free(tmp);
+        }
+       
 
-                                                                    if (func->param_count != 0) {
-                                                                        yyerror("Function expects parameters");
-                                                                        YYERROR;
-                                                                    }
+        // TODO: Here you would normally execute the function body
+        // For now, we'll just print that the function was called
+        printf("Called function: %s\n", $1);
+    } 
+    | IDENTIFIER '(' ')' 
+    {
+        Symbol* func = lookup_symbol(current_scope, $1);
+        if (!func || func->sym_type != SYM_FUNCTION) {
+            yyerror("Undefined function");
+            YYERROR;
+        }
 
-                                                                    // TODO: Here you would normally execute the function body
-                                                                    // For now, we'll just print that the function was called
-                                                                    printf("Called function: %s\n", $1);
-                                                                }
+        // Mark the function as used
+        func->is_used = true;
+
+        if (func->param_count != 0) {
+            yyerror("Function expects parameters");
+            YYERROR;
+        }
+
+        // TODO: Here you would normally execute the function body
+        // For now, we'll just print that the function was called
+        printf("Called function: %s\n", $1);
+    }
 ;
 
 argument_list:
@@ -1271,11 +1279,7 @@ int main() {
     Symbol *last_symbol_inserted=NULL;
     Parameter *parameter_head=NULL ;
     SYMTAB_FILE = fopen("symbols.txt", "w");
-    if (SYMTAB_FILE) {
-    print_symbol_table(global_scope); 
-    fclose(SYMTAB_FILE);
-    }
-
+    
     
     
     // Add built-in functions
@@ -1284,6 +1288,11 @@ int main() {
     last_symbol_inserted=insert_symbol(global_scope, "print", print_val, SYM_FUNCTION,0,NULL);
     
     int result = yyparse();
+    if (SYMTAB_FILE) {
+    print_symbol_table(global_scope); 
+    fclose(SYMTAB_FILE);
+    }
+
     
     // Clean up global scope
     free_symbol_table(global_scope);

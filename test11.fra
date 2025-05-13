@@ -1,0 +1,5 @@
+rakam add(rakam a, rakam b) {
+    raga3 a + b;
+}
+
+etba3(add(5, 7));

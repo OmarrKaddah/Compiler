@@ -25,8 +25,8 @@ typedef struct Symbol
     SymbolType sym_type;
     struct Symbol *next;
     int param_count;          // For functions, the number of parameters
-    int is_used;              // Flag to indicate if the symbol has been used
     struct Parameter *params; // For functions, the list of parameters
+    bool is_used;             // Flag to indicate if the symbol has been used
 } Symbol;
 
 typedef struct SymbolTable

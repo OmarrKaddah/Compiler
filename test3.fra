@@ -1,0 +1,7 @@
+faragh unused_function() {
+    etba3("This function is never called.");
+}
+
+faragh main() {
+    etba3("Main function executed.");
+}

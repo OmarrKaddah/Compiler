@@ -1,3 +1,4 @@
+%option yylineno
 /* Definitions */
 %{
     #include "val.h"
@@ -107,7 +108,7 @@
 
 [a-zA-Z_][a-zA-Z0-9_]*                          { yylval.s = strdup(yytext); return IDENTIFIER; }
 [ \t]+                                          { /* Ignore whitespace */ }
-\n                                              { yylineno++; } // Increment line number on newline
+
 .                                               { 
     fprintf(stderr, "Unrecognized token: %s\n", yytext); 
     exit(1); 

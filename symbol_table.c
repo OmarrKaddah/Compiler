@@ -121,7 +121,10 @@ Symbol *lookup_symbol(SymbolTable *table, const char *name)
         for (Symbol *sym = cur->table[idx]; sym; sym = sym->next)
         {
             if (strcmp(sym->name, name) == 0)
+            {
+                sym->is_used = true; // Mark the symbol as used
                 return sym;
+            }
         }
     }
     return NULL;
@@ -138,6 +141,18 @@ void free_symbol_table(SymbolTable *table)
         {
             Symbol *tmp = cur;
             cur = cur->next;
+
+       
+            if (tmp->sym_type == SYM_VARIABLE && !tmp->is_used)
+            {
+                fprintf(stderr, "Warning: Variable '%s' declared but not used.\n", tmp->name);
+            }
+
+            if (tmp->sym_type == SYM_FUNCTION && !tmp->is_used)
+            {
+                fprintf(stderr, "Warning: Function '%s' declared but not called.\n", tmp->name);
+            }
+
             free(tmp->name);
             if (tmp->value)
                 free_val(tmp->value);

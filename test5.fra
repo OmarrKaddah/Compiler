@@ -1,0 +1,2 @@
+rakam x = 5;
+x = "string"; // Invalid assignment

@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Define SYMTAB_FILE here
+FILE *SYMTAB_FILE = NULL;
+
 // Helper function to free a linked list of Parameters
 static void free_params(Parameter *params)
 {
@@ -187,45 +190,40 @@ void print_symbol_table(SymbolTable *table)
 {
     if (!table)
     {
-        printf("Symbol Table: (NULL)\n");
+        fprintf(SYMTAB_FILE, "Symbol Table: (NULL)\n");
         return;
     }
 
-    printf("\n=== SYMBOL TABLE (Scope Level: %d) ===\n", table->scope_level);
+    fprintf(SYMTAB_FILE, "\n=== SYMBOL TABLE (Scope Level: %d) ===\n", table->scope_level);
 
-    // Print each bucket in the hash table
     for (int i = 0; i < TABLE_SIZE; i++)
     {
         Symbol *sym = table->table[i];
         while (sym)
         {
-            // Print symbol name and type
-            printf("- %s [%s", sym->name,
-                   sym->sym_type == SYM_FUNCTION ? "FUNCTION" : sym->sym_type == SYM_VARIABLE ? "VARIABLE"
-                                                                                              : "CONSTANT");
+            fprintf(SYMTAB_FILE, "- %s [%s",
+                    sym->name,
+                    sym->sym_type == SYM_FUNCTION ? "FUNCTION" : sym->sym_type == SYM_VARIABLE ? "VARIABLE" : "CONSTANT");
 
-            // Additional info for functions
             if (sym->sym_type == SYM_FUNCTION)
             {
-                printf(", %d params", sym->param_count);
+                fprintf(SYMTAB_FILE, ", %d params", sym->param_count);
             }
-            printf("]\n");
+            fprintf(SYMTAB_FILE, "]\n");
 
-            // Print value
-            printf("  Value: ");
-            print_val(sym->value);
-            printf("\n");
+            fprintf(SYMTAB_FILE, "  Value: ");
+            print_val_to_file(sym->value);
+            fprintf(SYMTAB_FILE, "\n");
 
-            // Print parameters if it's a function
             if (sym->sym_type == SYM_FUNCTION && sym->params)
             {
-                printf("  Parameters:\n");
+                fprintf(SYMTAB_FILE, "  Parameters:\n");
                 Parameter *param = sym->params;
                 while (param)
                 {
-                    printf("    - %s: ", param->name);
-                    print_val(param->value);
-                    printf("\n");
+                    fprintf(SYMTAB_FILE, "    - %s: ", param->name);
+                    print_val_to_file(param->value);
+                    fprintf(SYMTAB_FILE, "\n");
                     param = param->next;
                 }
             }
@@ -234,11 +232,38 @@ void print_symbol_table(SymbolTable *table)
         }
     }
 
-    // Recursively print parent scope
     if (table->parent)
     {
-        printf("\n--- Parent Scope ---\n");
+        fprintf(SYMTAB_FILE, "\n--- Parent Scope ---\n");
         print_symbol_table(table->parent);
+    }
+}
+
+void print_val_to_file(val *v)
+{
+    if (!v)
+    {
+        fprintf(SYMTAB_FILE, "null");
+        return;
+    }
+
+    switch (v->type)
+    {
+    case TYPE_INT:
+        fprintf(SYMTAB_FILE, "%d", v->data.i);
+        break;
+    case TYPE_FLOAT:
+        fprintf(SYMTAB_FILE, "%f", v->data.f);
+        break;
+    case TYPE_STRING:
+        fprintf(SYMTAB_FILE, "\"%s\"", v->data.s);
+        break;
+    case TYPE_BOOL:
+        fprintf(SYMTAB_FILE, v->data.b ? "true" : "false");
+        break;
+    default:
+        fprintf(SYMTAB_FILE, "unknown");
+        break;
     }
 }
 

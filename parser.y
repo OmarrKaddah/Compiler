@@ -324,7 +324,6 @@ block_statement:
                                                                 if (current_params) {
                                                                     Parameter *param = current_params;
                                                                     while (param) {
-                                                                        
                                                                         val *v = malloc(sizeof(val));
                                                                         v->type = param->value->type;
                                                                         // Copy data based on type
@@ -334,19 +333,30 @@ block_statement:
                                                                             case TYPE_STRING: v->data.s = strdup(param->value->data.s); break;
                                                                             case TYPE_BOOL:   v->data.b = param->value->data.b; break;
                                                                         }
-                                                                        insert_symbol(current_scope, param->name, v, SYM_VARIABLE,0,NULL);
+                                                                        insert_symbol(current_scope, param->name, v, SYM_VARIABLE, 0, NULL);
                                                                         param = param->next;
                                                                     }
                                                                 }
-                                                               // print_symbol_table(current_scope);
 
+                                                                // Open SYMTAB_FILE and print the symbol table
+                                                                // SYMTAB_FILE = fopen("symbols.txt", "a");
+                                                                // if (SYMTAB_FILE) {
+                                                                //     print_symbol_table(current_scope);
+                                                                //     fclose(SYMTAB_FILE);
+                                                                // } else {
+                                                                //     fprintf(stderr, "Error: Could not open symbols.txt for writing\n");
+                                                                // }
                                                             }
     statement_list 
     '}' 
                                                         {
-                                                            // printf("######### SYMBOL TABLE ##########\n");
-                                                            // print_symbol_table(current_scope);
-
+                                                             SYMTAB_FILE = fopen("symbols.txt", "a");
+                                                                if (SYMTAB_FILE) {
+                                                                    print_symbol_table(current_scope);
+                                                                    fclose(SYMTAB_FILE);
+                                                                } else {
+                                                                    fprintf(stderr, "Error: Could not open symbols.txt for writing\n");
+                                                                }
                                                             // Cleanup scope
                                                             SymbolTable* parent_scope = current_scope->parent;
                                                             free_symbol_table(current_scope);
@@ -1221,6 +1231,12 @@ int main() {
     current_scope = global_scope;
     Symbol *last_symbol_inserted=NULL;
     Parameter *parameter_head=NULL ;
+    SYMTAB_FILE = fopen("symbols.txt", "w");
+    if (SYMTAB_FILE) {
+    print_symbol_table(global_scope); 
+    fclose(SYMTAB_FILE);
+    }
+
     
     
     // Add built-in functions

@@ -9,7 +9,7 @@
 #include <stdbool.h>
 
 #define TABLE_SIZE 101
-
+extern FILE *SYMTAB_FILE; // Declare SYMTAB_FILE as extern
 typedef enum
 {
     SYM_FUNCTION,
@@ -66,6 +66,9 @@ Parameter *create_param(const char *name, val *value);
 Parameter *append_param(Parameter *head, Parameter *p2);
 
 void print_symbol_table(SymbolTable *table);
+
+void print_val_to_file(val *v);
+
 
 // Add this with the other function declarations
 void print_val(val *v);

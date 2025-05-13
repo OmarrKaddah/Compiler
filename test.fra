@@ -1,15 +1,3 @@
-
-
-rakam easy(){
-    raga3 8;
+le7ad (rakam i = 0; i < 5; khatwa = 1) {
+    etba3(i);
 }
-
-rakam x= 8;
-
-etba3("x=");
-etba3(x);
-rakam y=8+4;
-{
-   rakam y=5;
-}
-etba3(y);

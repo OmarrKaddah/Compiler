@@ -1246,21 +1246,22 @@ atomic:
                                                                         }
     | FLOAT
                                                                         {
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = TYPE_FLOAT;
+                                                                            $$ =create_default_value(TYPE_FLOAT);
+                                                                            
                                                                             $$->data.f = $1;
+                                                                            add_quad("=", yytext, "", $$->place);
                                                                         }
     | STRING
                                                                         {
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = TYPE_STRING;
-                                                                            $$->data.s = $1;
+                                                                            $$ = create_default_value(TYPE_STRING);
+                                                                            $$->data.s = strdup($1);
+                                                                            add_quad("=", yytext, "", $$->place);
                                                                         }
     | BOOL
                                                                         {
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = TYPE_BOOL;
+                                                                            $$ = create_default_value(TYPE_BOOL);
                                                                             $$->data.b = $1;
+                                                                            add_quad("=", yytext, "", $$->place);
                                                                         }
     | IDENTIFIER
                                                                         {

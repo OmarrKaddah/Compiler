@@ -1,8 +1,9 @@
-rakam x=2+3;
-x=5;
-x=4+5;
-rakam easy(rakam f){
 
-}
+rakam x=5;
 
-easy(5);
+
+kalam kelma="hello";
+
+kasr time=3.5;
+
+bool sah=true;

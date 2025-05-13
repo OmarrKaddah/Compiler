@@ -1,1 +1,7 @@
 rakam x=2+3;
+
+rakam easy(rakam f){
+
+}
+
+easy(5);

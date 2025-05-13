@@ -200,7 +200,7 @@ void print_symbol_table(SymbolTable *table)
         while (sym)
         {
             // Print symbol name and type
-            printf("• %s [%s", sym->name,
+            printf("- %s [%s", sym->name,
                    sym->sym_type == SYM_FUNCTION ? "FUNCTION" : sym->sym_type == SYM_VARIABLE ? "VARIABLE"
                                                                                               : "CONSTANT");
 
@@ -237,7 +237,7 @@ void print_symbol_table(SymbolTable *table)
     // Recursively print parent scope
     if (table->parent)
     {
-        printf("\n↑ Parent Scope ↑\n");
+        printf("\n--- Parent Scope ---\n");
         print_symbol_table(table->parent);
     }
 }

@@ -108,6 +108,7 @@ statement:
 function_definition:
     type_specifier IDENTIFIER '(' parameter_list ')' 
                                                                     {
+                                                                        add_quad("PROC", $2, NULL, NULL);
                                                                         val *func_val = malloc(sizeof(val));
                                                                         func_val->type = $1;
 
@@ -128,19 +129,25 @@ function_definition:
                                                                     { 
                                                                         current_params = NULL; 
                                                                         current_function = NULL;  
+                                                                        add_quad("ENDPROC ",$2,NULL,NULL);
                                                                     
                                                                     } // Reset
     
 
     | type_specifier IDENTIFIER '(' ')'                              {
+
                                                                         // Similar handling for no-parameter functions
+                                                                        add_quad("PROC ", $2, NULL, NULL);
                                                                         val* func_val = malloc(sizeof(val));
                                                                         func_val->type = $1;
                                                                         last_symbol_inserted=insert_symbol(current_scope, $2, func_val, SYM_FUNCTION,0,NULL);
                                                                         current_function = last_symbol_inserted;
                                                                         
                                                                     }
-     block_statement                                             {   current_function = NULL;   }                                                   
+     block_statement                                                {   
+                                                                    current_function = NULL;  
+                                                                    add_quad("ENDPROC ",$2,NULL,NULL);
+                                                                    }                                                   
     ;
 parameter_declaration:
     type_specifier IDENTIFIER
@@ -163,6 +170,9 @@ parameter_list:
     ;
 function_call_statement:
                                                                 IDENTIFIER '(' argument_list ')'                        {
+
+                                                                    
+                                                                    
                                                                     Symbol* func = lookup_symbol(current_scope, $1);
                                                                     if (!func || func->sym_type != SYM_FUNCTION) {
                                                                         yyerror("Undefined function");
@@ -240,9 +250,12 @@ function_call_statement:
 
                                                                     // TODO: Here you would normally execute the function body
                                                                     // For now, we'll just print that the function was called
+                                                                    add_quad("CALL", $1, NULL, NULL);
                                                                     printf("Called function: %s\n", $1);
                                                                 } 
     | IDENTIFIER '(' ')' {
+
+
                                                                     Symbol* func = lookup_symbol(current_scope, $1);
                                                                     if (!func || func->sym_type != SYM_FUNCTION) {
                                                                         yyerror("Undefined function");
@@ -256,6 +269,7 @@ function_call_statement:
 
                                                                     // TODO: Here you would normally execute the function body
                                                                     // For now, we'll just print that the function was called
+                                                                    add_quad("CALL", $1, NULL, NULL);
                                                                     printf("Called function: %s\n", $1);
                                                                 }
 ;
@@ -309,6 +323,7 @@ assignment_statement:
                                                     break;
                                                 case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
                                             }
+                                            add_quad("ASSIGN",$3,NULL,$1);
                                             free_val($3);
                                         }
     ;
@@ -644,6 +659,7 @@ print_statement:
                                                                               default:
                                                                                   yyerror("Unknown type in print statement");
                                                                           }
+                                                                          
 
                                                                           // Free the allocated val structure
                                                                           free($3);
@@ -754,22 +770,22 @@ expression:
                                                                                  case TYPE_INT:
                                                                                      result = ($1->data.i == $3->data.i);
                                                                                      $$->data.b = result;
-                                                                                     add_quad("CMP", $1, $3, $$);
+                                                                                     add_quad("Equal_Equal", $1, $3, $$);
                                                                                      break;
                                                                                  case TYPE_FLOAT:
                                                                                      result = ($1->data.f == $3->data.f);
                                                                                      $$->data.b = result;
-                                                                                        add_quad("CMP", $1, $3, $$);
+                                                                                        add_quad("Equal_Equal", $1, $3, $$);
                                                                                      break;
                                                                                  case TYPE_STRING:
                                                                                      result = (strcmp($1->data.s, $3->data.s) == 0);
                                                                                      $$->data.b = result;
-                                                                                        add_quad("CMP", $1, $3, $$);
+                                                                                        add_quad("Equal_Equal", $1, $3, $$);
                                                                                      break;
                                                                                  case TYPE_BOOL:
                                                                                      result = ($1->data.b == $3->data.b);
                                                                                      $$->data.b = result;
-                                                                                        add_quad("CMP", $1, $3, $$);
+                                                                                        add_quad("Equal_Equal", $1, $3, $$);
                                                                                      break;
                                                                                  default:
                                                                                      yyerror("Invalid type for equality comparison");
@@ -815,13 +831,9 @@ expression:
                                                                                     break;
                                                                             }
 
-                                                                            add_quad("CMP", $1, $3, cmp_res);                // [quad]
+                                                                            add_quad("Not_Equal", $1, $3, $$);                // [quad]
 
-                                                                            $$ = malloc(sizeof(val));                        // [quad]
-                                                                            $$->type = TYPE_BOOL;                            // [quad]
-                                                                            $$->data.b = !(cmp_res->data.b);                 // [quad]
-
-                                                                            add_quad("NOT", cmp_res, "", $$);                // [quad]
+                            
                                                                         }
                                                                     }
 
@@ -836,7 +848,7 @@ expression:
                                                                               $$ = malloc(sizeof(val));
                                                                               $$->type = TYPE_BOOL;
                                                                               $$->data.b = $1->data.b && $3->data.b;
-                                                                                add_quad("AND", $1, $3, $$);
+                                                                                add_quad("Logical_AND", $1, $3, $$);
                                                                           }
                                                                       }
     | expression OR expression %prec OR
@@ -850,7 +862,7 @@ expression:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_BOOL;
                                                                                 $$->data.b = $1->data.b || $3->data.b;
-                                                                                add_quad("OR", $1, $3, $$);
+                                                                                add_quad("Logical_OR", $1, $3, $$);
                                                                             }
                                                                         }
     | expression LESS expression %prec LESS
@@ -863,8 +875,8 @@ expression:
                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                 $$->data.b = (left < right);
                                                                                 //add quad
-                                                                                add_quad("CMP",)
-                                                                                add_quad("=",(left<right),, $$);
+                                                                                add_quad("LESS", $1, $3, $$);
+                                                                                
                                                                             } else {
                                                                                 yyerror("Comparison operator '<' requires numeric operands");
                                                                                 $$ = malloc(sizeof(val));
@@ -1004,10 +1016,10 @@ expression:
                                                                             $$->type = $2->type;
                                                                             if ($2->type == TYPE_INT) {
                                                                                 $$->data.i = ++($2->data.i);
-                                                                                add_quad("INCR", $2, NULL, $$);
+                                                                                add_quad("ADD", $2, "1", $$);
                                                                             } else {
                                                                                 $$->data.f = ++($2->data.f);
-                                                                                add_quad("INCR", $2, NULL, $$);
+                                                                                add_quad("ADD", $2, "1", $$);
                                                                             }
                                                                         }
     | expression INCR %prec INCR
@@ -1020,10 +1032,10 @@ expression:
                                                                             $$->type = $1->type;
                                                                             if ($1->type == TYPE_INT) {
                                                                                 $$->data.i = $1->data.i++;
-                                                                                add_quad("INCR", $1, NULL, $$);
+                                                                                add_quad("INCR", $1, "1", $$);
                                                                             } else {
                                                                                 $$->data.f = $1->data.f++;
-                                                                                add_quad("INCR", $1, NULL, $$);
+                                                                                add_quad("INCR", $1, "1", $$);
                                                                             }
                                                                         }
    | expression MOD expression %prec MOD
@@ -1042,34 +1054,43 @@ expression:
                                                                                 $$->data.i = 0;
                                                                             }
                                                                         }
-    | expression POWER expression %prec POWER
-                                                                    {
-                                                                        if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                            ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                                                                            $$ = malloc(sizeof(val));
-                                                                            if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
-                                                                                $$->type = TYPE_FLOAT;
-                                                                                float base = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                                                                                float exponent = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                                                                                $$->data.f = powf(base, exponent);
-                                                                                add_quad("POWER", $1, $3, $$);
-                                                                            } else {
-                                                                                $$->type = TYPE_INT;
-                                                                                // Simple integer power (won't handle negative exponents well)
-                                                                                int result = 1;
-                                                                                for (int i = 0; i < $3->data.i; i++) {
-                                                                                    result *= $1->data.i;
-                                                                                }
-                                                                                $$->data.i = result;
-                                                                                add_quad("POWER", $1, $3, $$);
-                                                                            }
+
+| expression POWER expression %prec POWER
+                                                                {
+                                                                    if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                        ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                        $$ = malloc(sizeof(val));
+                                                                        if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                            $$->type = TYPE_FLOAT;
+                                                                            float base = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                            float exponent = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                            $$->data.f = powf(base, exponent);
+                                                                            add_quad("POWER", $1, $3, $$);
                                                                         } else {
-                                                                            yyerror("Power operation requires numeric operands");
-                                                                            $$ = malloc(sizeof(val));
                                                                             $$->type = TYPE_INT;
-                                                                            $$->data.i = 0;
+                                                                            // Simple integer power (won't handle negative exponents well)
+                                                                            int result = 1;
+                                                                            for (int i = 0; i < $3->data.i; i++) {
+                                                                                result *= $1->data.i;
+                                                                            }
+                                                                            $$->data.i = result;
+                                                                            add_quad("POWER", $1, $3, $$);
                                                                         }
+                                                                    } else {
+                                                                        yyerror("Power operation requires numeric operands");
+                                                                        $$ = malloc(sizeof(val));
+                                                                        $$->type = TYPE_INT;
+                                                                        $$->data.i = 0;
                                                                     }
+                                                                }
+| '(' expression ')'
+                                                                    {
+                                                                        $$ = $2;
+                                                                    }
+                                                                ;
+
+
+
     | '(' expression ')'
                                                                         {
                                                                             $$ = $2;
@@ -1078,6 +1099,7 @@ expression:
 function_call:
     IDENTIFIER '(' argument_list ')'                                   
                                                                 {
+                                                                    
                                                                     Symbol* func = lookup_symbol(current_scope, $1);
                                                                     if (!func || func->sym_type != SYM_FUNCTION) {
                                                                         yyerror("Undefined function");
@@ -1152,6 +1174,7 @@ function_call:
 
                                                                     // Return default value (temporary)
                                                                     //TODO: Implement actual function call
+                                                                    add_quad("CALL", $1, NULL, NULL);
                                                                     $$ = create_default_value(func->value->type);
                                                                 }
     | IDENTIFIER '(' ')'                                               
@@ -1166,6 +1189,7 @@ function_call:
                                                                         yyerror("Function expects parameters");
                                                                         YYERROR;
                                                                     }
+                                                                    add_quad("CALL", $1, NULL, NULL);
                                                                     //TODO: Implement actual function call
                                                                     $$ = create_default_value(func->value->type);
                                                                 }

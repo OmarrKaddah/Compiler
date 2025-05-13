@@ -45,6 +45,9 @@
     Parameter *p;
 }
 
+
+  
+
 /* Token declarations */
 %token <i> INT
 %token <f> FLOAT
@@ -103,6 +106,16 @@ statement:
     | print_statement';'  
     | block_statement
     | function_call_statement ';'
+    | error ';' { 
+      fprintf(stderr, "Skipping invalid statement\n");
+       yyerrok;  // Reset error state
+       yyclearin;  // Discard current token
+    }
+   | error '}' { 
+       fprintf(stderr, "Skipping to block end\n");
+       yyerrok;
+       yyclearin;
+    }
     ;
 
 function_definition:
@@ -301,11 +314,15 @@ assignment_statement:
                                                 YYERROR;
                                             }
                                             
-                                            // Type checking
-                                            if (sym->value->type != $3->type) {
-                                                yyerror("Type mismatch in assignment");
-                                                YYERROR;
-                                            }
+                                            if(sym->value->type != $3->type) {
+                                            char msg[128];
+                                            snprintf(msg, sizeof(msg), 
+                                                "Type mismatch: %s vs %s",
+                                                type_to_string(sym->value->type),
+                                                type_to_string($3->type));
+                                            yyerror(msg);
+                                            YYERROR;
+                                        }
                                             
                                             // Update value
                                             switch(sym->value->type) {
@@ -1187,16 +1204,23 @@ atomic:
 /* track line numbers in your lexer (lexer.l):
      \n   { ++yylineno; return '\n'; }
 */
-
+static int error_count = 0;
 void syntaxError(int line, const char *msg, const char *token) {
     fprintf(stderr,
             "Syntax error at line %d: %s near '%s'\n",
             line, msg, token);
-    exit(EXIT_FAILURE);
+   if(++error_count > 10) {
+        fprintf(stderr, "Too many errors, aborting\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void semanticError(int line, const char *msg) {
     fprintf(stderr, "Semantic error at line %d: %s\n", line, msg);
+    if(++error_count > 10) {
+        fprintf(stderr, "Too many errors, aborting\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void yyerror(const char* msg) {

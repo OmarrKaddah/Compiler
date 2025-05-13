@@ -1,3 +1,10 @@
-rakam x = 10;
-rakam y = 0;
-etba3(x / y); // Invalid division
+x = 5;
+
+rakam r = "hamada";
+
+
+etba3(x);
+
+{
+    etba3("good statement");
+}

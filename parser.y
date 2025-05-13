@@ -344,8 +344,8 @@ block_statement:
     statement_list 
     '}' 
                                                         {
-                                                            // printf("######### SYMBOL TABLE ##########\n");
-                                                            // print_symbol_table(current_scope);
+                                                            printf("######### SYMBOL TABLE ##########\n");
+                                                            print_symbol_table(current_scope);
 
                                                             // Cleanup scope
                                                             SymbolTable* parent_scope = current_scope->parent;

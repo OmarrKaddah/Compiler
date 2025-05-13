@@ -1,0 +1,6 @@
+rakam x=5;
+etba3(x);
+
+x=153;
+
+etba3(x);

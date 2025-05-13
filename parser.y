@@ -8,6 +8,7 @@
     #include <stdlib.h>
     #include <stdio.h> 
     #include "symbol_table.h"
+
      val* create_default_value(Type type);
     void print_val(val *v);
     void free_val(val *v);
@@ -105,8 +106,6 @@ statement:
     | print_statement';'  
     | block_statement
     | function_call_statement ';'
-    /* syntax‐error recovery: skip bad statement up to next ';' */
-    | error ';'                { yyerror("Skipping invalid statement"); yyerrok; }
     ;
 
 function_definition:
@@ -1174,11 +1173,25 @@ atomic:
 */
 int yylineno = 1;
 
-void yyerror(const char* s) {
-    extern char *yytext;
+void syntaxError(int line, const char *msg, const char *token) {
     fprintf(stderr,
             "Syntax error at line %d: %s near '%s'\n",
-            yylineno, s, yytext);
+            line, msg, token);
+    exit(EXIT_FAILURE);
+}
+
+void semanticError(int line, const char *msg) {
+    fprintf(stderr, "Semantic error at line %d: %s\n", line, msg);
+}
+
+void yyerror(const char* msg) {
+    extern char *yytext;
+    /* Bison will pass “syntax error, unexpected …” for parse errors */
+    if (strncmp(msg, "syntax error", 12) == 0) {
+        syntaxError(yylineno, msg, yytext);
+    } else {
+        semanticError(yylineno, msg);
+    }
 }
 
 val* create_default_value(Type type) {

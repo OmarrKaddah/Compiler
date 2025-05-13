@@ -140,7 +140,7 @@ function_definition:
                                                                     { 
                                                                         current_params = NULL; 
                                                                         current_function = NULL;  
-                                                                         add_quad("END", current_function->name, "", "");
+                                                                         add_quad("END", $2, "", "");
                                                                     
                                                                     } // Reset
     
@@ -181,6 +181,7 @@ parameter_list:
 function_call_statement:
     IDENTIFIER '(' argument_list ')'                        
                                                             {
+                                                                
                                                                 Symbol* func = lookup_symbol(current_scope, $1);
                                                                 if (!func || func->sym_type != SYM_FUNCTION) {
                                                                     yyerror("Undefined function");
@@ -205,12 +206,14 @@ function_call_statement:
                                                                 Parameter *reversed_args = NULL;
                                                                 Parameter *current = $3;
                                                                 while (current) {
+                                                                    printf("\nhii\n");
                                                                     add_quad("PARAM", current->value->place, "", current->name ? current->name : "");
                                                                     Parameter *next = current->next;
                                                                     current->next = reversed_args;
                                                                     reversed_args = current;
                                                                     current = next;
                                                                 }
+                                                                
 
                                                                 // Type checking and argument processing
                                                                 Parameter *param = func->params;
@@ -259,12 +262,12 @@ function_call_statement:
                                                                     free(tmp);
                                                                 }
                                                             
-                                                                 add_quad("GOSUB",  $1,         "",    ""); 
+                                                                add_quad("JUMP",$1,"",""); 
                                                                 // TODO: Here you would normally execute the function body
                                                                 // For now, we'll just print that the function was called
                                                                 printf("Called function: %s\n", $1);
                                                             } 
-                                                            | IDENTIFIER '(' ')' 
+    | IDENTIFIER '(' ')' 
                                                             {
                                                                 Symbol* func = lookup_symbol(current_scope, $1);
                                                                 if (!func || func->sym_type != SYM_FUNCTION) {
@@ -288,7 +291,8 @@ function_call_statement:
 
 argument_list:
     expression        
-                                                            {   Parameter *p = malloc(sizeof(Parameter));
+                                                            {  printf("Called function: %s\n", $1);
+                                                                 Parameter *p = malloc(sizeof(Parameter));
                                                                 p->name = new_temp(); // Arguments don't have names
                                                                 p->value = $1;
                                                                 p->next = NULL;
@@ -353,6 +357,8 @@ block_statement:
                                                                     while (param) {
                                                                         val *v = malloc(sizeof(val));
                                                                         v->type = param->value->type;
+                                                                        v->place=param->name;
+                                                                        add_quad("=",param->value->place,"",v->place);
                                                                         // Copy data based on type
                                                                         switch (v->type) {
                                                                             case TYPE_INT:    v->data.i = param->value->data.i; break;

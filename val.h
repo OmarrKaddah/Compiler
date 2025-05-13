@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <stdbool.h>
 
 #ifndef val_h
 #define val_h
@@ -29,6 +30,8 @@ typedef struct
     } data;
 
     char *place;
+
+    bool is_constant;
 
 } val;
 

@@ -691,27 +691,64 @@ expression:
         $$ = $1;
     }
     | expression PLUS expression %prec PLUS
-                                                                      { 
-                                                                          if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                              ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                                                                              $$ = malloc(sizeof(val));
-                                                                              if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
-                                                                                  $$->type = TYPE_FLOAT;
-                                                                                  float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                                                                                  float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                                                                                  $$->data.f = left + right;
-                                                                                  $$->place = new_temp();
-                                                                                  add_quad("ADD", $1->place, $3->place, $$->place);
-                                                                              } else {
-                                                                                  $$->type = TYPE_INT;
-                                                                                  $$->data.i = $1->data.i + $3->data.i;
-                                                                                  $$->place = new_temp();
-                                                                                  add_quad("ADD", $1->place, $3->place, $$->place);
-                                                                              }
-                                                                          } else {
-                                                                              yyerror("Invalid expression: cannot perform addition between non-numerical expressions.");
-                                                                          }
-                                                                      }
+                                                                      
+                                                                    {
+                                                                        // Type checking
+                                                                        if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                            ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                            
+                                                                            $$ = malloc(sizeof(val));
+
+                                                                            // Constant Folding: If both operands are constants, compute at compile-time
+                                                                            if ($1->is_constant && $3->is_constant) {
+                                                                                $$->is_constant = true;
+                                                                                
+                                                                                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                    // Float result
+                                                                                    $$->type = TYPE_FLOAT;
+                                                                                    float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                    float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                    $$->data.f = left + right;
+                                                                                    
+                                                                                    // Store the result as a string (e.g., "5.0")
+                                                                                    char result_str[32];
+                                                                                    snprintf(result_str, sizeof(result_str), "%f", $$->data.f);
+                                                                                    $$->place = strdup(result_str);
+                                                                                } else {
+                                                                                    // Integer result
+                                                                                    $$->type = TYPE_INT;
+                                                                                    $$->data.i = $1->data.i + $3->data.i;
+                                                                                    
+                                                                                    // Store the result as a string (e.g., "5")
+                                                                                    char result_str[32];
+                                                                                    snprintf(result_str, sizeof(result_str), "%d", $$->data.i);
+                                                                                    $$->place = strdup(result_str);
+                                                                                }
+                                                                            } 
+                                                                            // Non-constant: Generate temporaries and ADD quadruple
+                                                                            else {
+                                                                                $$->is_constant = false;
+                                                                                $$->place = new_temp();  // e.g., "t1"
+
+                                                                                // Determine result type (int or float)
+                                                                                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                    $$->type = TYPE_FLOAT;
+                                                                                } else {
+                                                                                    $$->type = TYPE_INT;
+                                                                                }
+
+                                                                                // Generate ADD quadruple
+                                                                                add_quad("ADD", $1->place, $3->place, $$->place);
+                                                                            }
+                                                                        } else {
+                                                                            yyerror("Cannot add non-numeric types");
+                                                                            YYERROR;
+                                                                        }
+
+                                                                        // Free child expressions if not needed anymore
+                                                                        free_val($1);
+                                                                        free_val($3);
+                                                                    }
     | expression MINUS expression %prec MINUS
                                                                        {
                                                                            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
@@ -1242,26 +1279,34 @@ atomic:
                                                                             $$ = create_default_value(TYPE_INT);
                                                                             
                                                                             $$->data.i = $1;
-                                                                            add_quad("ASSIGN", yytext, "", $$->place);
+                                                                            $$->is_constant = true;
+                                                                            $$->place = strdup(yytext);
                                                                         }
     | FLOAT
                                                                         {
                                                                             $$ =create_default_value(TYPE_FLOAT);
                                                                             
                                                                             $$->data.f = $1;
-                                                                            add_quad("ASSIGN", yytext, "", $$->place);
+                                                                            $$->is_constant = true;
+                                                                            $$->place = strdup(yytext);
+                                                                            
                                                                         }
     | STRING
                                                                         {
                                                                             $$ = create_default_value(TYPE_STRING);
                                                                             $$->data.s = strdup($1);
-                                                                            add_quad("ASSIGN", yytext, "", $$->place);
+                                                                            $$->is_constant = true;
+                                                                            $$->place = strdup(yytext);
+                                                                            
                                                                         }
     | BOOL
                                                                         {
                                                                             $$ = create_default_value(TYPE_BOOL);
                                                                             $$->data.b = $1;
-                                                                            add_quad("ASSIGN", yytext, "", $$->place);
+                                                                            $$->is_constant = true;
+                                                                            $$->place = strdup(yytext);
+
+                                                                            
                                                                         }
     | IDENTIFIER
                                                                         {
@@ -1276,6 +1321,8 @@ atomic:
                                                                             if ($$->type == TYPE_STRING) {
                                                                                 $$->data.s = strdup(sym->value->data.s);
                                                                             }
+                                                                            $$->place = strdup($1);
+                                                                            $$->is_constant = false;
                                                                         }
                                                                 
                                                                    
@@ -1311,6 +1358,7 @@ void yyerror(const char* msg) {
 val* create_default_value(Type type) {
     val *v = malloc(sizeof(val));
     v->type = type;
+    v->is_constant = false; 
     switch (type) {
         case TYPE_INT:    v->data.i = 0; break;
         case TYPE_FLOAT:  v->data.f = 0.0f; break;

@@ -109,23 +109,24 @@ statement:
 
 function_definition:
     type_specifier IDENTIFIER '(' parameter_list ')' 
-        {
-            val *func_val = malloc(sizeof(val));
-            func_val->type = $1;
+                                                                    {
+                                                                        val *func_val = malloc(sizeof(val));
+                                                                        func_val->type = $1;
 
-            // Count parameters
-            int param_count = 0;
-            Parameter *p = $4;
-            while (p) { param_count++; p = p->next; 
-            
-            }
+                                                                        // Count parameters
+                                                                        int param_count = 0;
+                                                                        Parameter *p = $4;
+                                                                        while (p) { param_count++; p = p->next; 
+                                                                        
+                                                                        }
 
-            printf("parameter count %d ---",param_count);
-            // Insert function with parameters
-            last_symbol_inserted = insert_symbol(current_scope, $2, func_val, SYM_FUNCTION, param_count, $4);
-            current_params = $4; // Store for block_statement
-        }
-    block_statement                        { current_params = NULL; } // Reset
+                                                                        printf("parameter count %d ---",param_count);
+                                                                        // Insert function with parameters
+                                                                        last_symbol_inserted = insert_symbol(current_scope, $2, func_val, SYM_FUNCTION, param_count, $4);
+                                                                        current_params = $4; // Store for block_statement
+                                                                    }
+    block_statement                                                 
+                                                                    { current_params = NULL; } // Reset
     
 
     | type_specifier IDENTIFIER '(' ')'                              {

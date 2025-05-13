@@ -11,6 +11,7 @@
      val* create_default_value(Type type);
     void print_val(val *v);
     void free_val(val *v);
+    const char *type_to_string(Type t);
     /* track current line number */
     extern int yylineno;
     extern char *yytext;
@@ -19,6 +20,7 @@
     SymbolTable* global_scope = NULL;
     Parameter *current_params = NULL; // Global tracker for parameters
     Symbol *last_symbol_inserted=NULL;
+    static Symbol *current_function = NULL;
 
     void print_val(val *v);
     void free_val(val *v);
@@ -65,7 +67,7 @@
 %token PLUS_EQUAL MINUS_EQUAL TIMES_EQUAL DIVIDE_EQUAL
 %token INCR
 %token IF ELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT STEP
-%token T_INT T_FLOAT T_STRING T_BOOL
+%token T_INT T_FLOAT T_STRING T_BOOL T_VOID
 
 /* Operator precedence */
 %left OR
@@ -123,10 +125,15 @@ function_definition:
                                                                         printf("parameter count %d ---",param_count);
                                                                         // Insert function with parameters
                                                                         last_symbol_inserted = insert_symbol(current_scope, $2, func_val, SYM_FUNCTION, param_count, $4);
+                                                                        current_function     = last_symbol_inserted;
                                                                         current_params = $4; // Store for block_statement
                                                                     }
     block_statement                                                 
-                                                                    { current_params = NULL; } // Reset
+                                                                    { 
+                                                                        current_params = NULL; 
+                                                                        current_function = NULL;  
+                                                                    
+                                                                    } // Reset
     
 
     | type_specifier IDENTIFIER '(' ')'                              {
@@ -134,10 +141,10 @@ function_definition:
                                                                         val* func_val = malloc(sizeof(val));
                                                                         func_val->type = $1;
                                                                         last_symbol_inserted=insert_symbol(current_scope, $2, func_val, SYM_FUNCTION,0,NULL);
-                                                                        
+                                                                        current_function = last_symbol_inserted;
                                                                         
                                                                     }
-     block_statement                                             {    }                                                   
+     block_statement                                             {   current_function = NULL;   }                                                   
     ;
 parameter_declaration:
     type_specifier IDENTIFIER
@@ -530,13 +537,51 @@ type_specifier:
   | T_FLOAT  { $$ = TYPE_FLOAT; }
   | T_STRING { $$ = TYPE_STRING; }
   | T_BOOL   { $$ = TYPE_BOOL; }
+  | T_VOID   { $$ = TYPE_VOID; }
   ;
 
 
 return_statement:
-    RETURN ';' 
-    | RETURN expression ';'   
-    ;
+  RETURN expression 
+                                                            {
+                                                                if (!current_function) {
+                                                                yyerror("‘return’ not inside any function");
+                                                                YYERROR;
+                                                                }
+                                                                /* mismatch between return-expr type vs. function’s declared type */
+                                                                if ($2->type != current_function->value->type) {
+                                                                    char msg[128];
+                                                                    snprintf(msg, sizeof msg,
+                                                                            "Return type mismatch in '%s': expected %s but got %s",
+                                                                            current_function->name,
+                                                                            type_to_string(current_function->value->type),
+                                                                            type_to_string($2->type));
+                                                                    yyerror(msg);
+                                                                    YYERROR;
+                                                               
+                                                                }
+                                                                free_val($2);  /* if you don’t store it anywhere */
+                                                            }
+| RETURN 
+                                                            {
+                                                                if (!current_function) {
+                                                                yyerror("‘return’ not inside any function");
+                                                                YYERROR;
+                                                                }
+                                                                /* you don’t have a TYPE_VOID, so disallow bare `return;` */
+                                                                if (current_function->value->type != TYPE_VOID) {
+                                                                char msg[128];
+                                                                snprintf(msg, sizeof msg,
+                                                                        "Return type mismatch in '%s': expected %s but got void",
+                                                                        current_function->name,
+                                                                        type_to_string(current_function->value->type)
+                                                                        );
+                                                                yyerror(msg);
+                                                                YYERROR;   
+                                                                }
+                                                            }
+;
+
 
 break_statement:
     BREAK ';'
@@ -1121,6 +1166,18 @@ val* create_default_value(Type type) {
     }
     return v;
 }
+
+const char *type_to_string(Type t) {
+  switch(t) {
+    case TYPE_INT:    return "int";
+    case TYPE_FLOAT:  return "float";
+    case TYPE_STRING: return "string";
+    case TYPE_BOOL:   return "bool";
+    case TYPE_VOID:   return "void";
+    default:          return "unknown";
+  }
+}
+
 
 
 int main() {

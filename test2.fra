@@ -1,4 +1,4 @@
-rakam x=0;
+rakam x=5;
 rakam easy(rakam a, rakam b){
     etba3("hi");
     x=a+b;

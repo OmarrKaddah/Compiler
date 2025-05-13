@@ -46,6 +46,7 @@
 "kasr"                                          { return T_FLOAT; }
 "kalam"                                         { return T_STRING; }
 "bool"                                          { return T_BOOL; }
+"faragh"                                        { return T_VOID; }
                                                 
 
 "("                                             { return '('; }    

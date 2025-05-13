@@ -1,3 +1,6 @@
-le7ad (rakam i = 0; i < 5; khatwa = 1) {
-    etba3(i);
+
+rakam h=8;
+
+faragh add(rakam a,rakam b){
+    raga3 ;
 }

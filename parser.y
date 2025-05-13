@@ -78,13 +78,13 @@ statement:
     | declaration ';'
     | if_statement
     | while_statement
-    | do_while_statement
+    | do_while_statement';'
     | for_statement
     | switch_statement
-    | return_statement
-    | break_statement
-    | continue_statement
-    | print_statement
+    | return_statement';'
+    | break_statement';'
+    | continue_statement';'
+    | print_statement';'  
     | block_statement
     | function_call_statement ';'
     ;
@@ -198,50 +198,109 @@ statement_list:
 
 if_statement:
     IF '(' expression ')' block_statement
-    {
-        if ($3->type != TYPE_BOOL) {
-            yyerror("Condition in if statement must be boolean");
-            YYERROR;
-        }
-        if ($3->data.b )
-        {
-            printf("Condition is true");
-        }
-        free($3);
-    }
+                                                            {
+                                                                if ($3->type != TYPE_BOOL) {
+                                                                    yyerror("Condition in if statement must be boolean");
+                                                                    YYERROR;
+                                                                }
+                                                                if ($3->data.b )
+                                                                {
+                                                                    printf("Condition is true");
+                                                                }
+                                                                free($3);
+                                                            }
     | IF '(' expression ')' block_statement ELSE block_statement
-    {
-        if ($3->type != TYPE_BOOL) {
-            yyerror("Condition in if statement must be boolean");
-            YYERROR;
-        }
-        if ($3->data.b )
-        {
-            printf("Condition is true");
-        }
-        else
-        {
-            printf("Condition is false");
-        }
-        free($3);
-    }
+                                                            {
+                                                                if ($3->type != TYPE_BOOL) {
+                                                                    yyerror("Condition in if statement must be boolean");
+                                                                    YYERROR;
+                                                                }
+                                                                if ($3->data.b )
+                                                                {
+                                                                    printf("Condition is true");
+                                                                }
+                                                                else
+                                                                {
+                                                                    printf("Condition is false");
+                                                                }
+                                                                free($3);
+                                                            }
     ;
 
 while_statement:
     WHILE '(' expression ')' block_statement
+                                                            {
+                                                                if ($3->type != TYPE_BOOL) {
+                                                                    yyerror("Condition in while statement must be boolean");
+                                                                    YYERROR;
+                                                                }
+                                                                if ($3->data.b )
+                                                                {
+                                                                    printf("Condition is true");
+                                                                }
+                                                                else
+                                                                {
+                                                                    printf("Condition is false");
+                                                                }
+                                                                free($3);
+                                                            }
     ;
 
 do_while_statement:
-    DO block_statement WHILE '(' expression ')' ';'
+    DO block_statement WHILE '(' expression ')' 
+                                                            {
+                                                                if ($5->type != TYPE_BOOL) {
+                                                                    yyerror("Condition in do-while statement must be boolean");
+                                                                    YYERROR;
+                                                                }
+                                                                if ($5->data.b )
+                                                                {
+                                                                    printf("Condition is true");
+                                                                }
+                                                                else
+                                                                {
+                                                                    printf("Condition is false");
+                                                                }
+                                                                free($5);
+                                                            }
     ;
 
 for_statement:
-    FOR '(' assignment_statement ';' expression ';' STEP '=' atomic ')' block_statement 
-    | FOR '(' declaration ';' expression ';' STEP '=' atomic ')' block_statement
+    FOR '(' assignment_statement ';' expression ';' STEP EQUAL atomic ')' block_statement     {
+                                                                if ($5->type != TYPE_BOOL)
+                                                                 {
+                                                                    yyerror("Condition in for statement must be boolean");
+                                                                    YYERROR;
+                                                                }
+                                                                if ($5->data.b )
+                                                                {
+                                                                    printf("Condition is true");
+                                                                }
+                                                                else
+                                                                {
+                                                                    printf("Condition is false");
+                                                                }
+                                                                free($5);
+                                                                if ($9->type != TYPE_INT)
+                                                                 {
+                                                                    yyerror("Step value in for statement must be int");
+                                                                    YYERROR;
+                                                                }
+
+
+                                                            }
+    | FOR '(' declaration ';' expression ';' STEP EQUAL atomic ')' block_statement
     ;
 
 switch_statement:
     SWITCH '(' expression ')' '{' case_list '}'
+                                                            {
+                                                                if ($3->type != TYPE_INT && $3->type != TYPE_STRING) {
+                                                                    yyerror("Switch expression must be of type int or string");
+                                                                    YYERROR;
+                                                                }
+                                                                free($3);
+                                                            }
     ;
 
 case_list:
@@ -250,7 +309,14 @@ case_list:
     ;
 
 case_statement:
-    CASE expression ':' statement ';'
+    CASE expression ':' statement 
+                                                            {
+                                                                if ($2->type != TYPE_INT && $2->type != TYPE_STRING) {
+                                                                    yyerror("Case expression must be of type int or string");
+                                                                    YYERROR;
+                                                                }
+                                                                free($2);
+                                                            }
     ;
 
 declaration:
@@ -324,7 +390,7 @@ continue_statement:
     ;
 
 print_statement:
-    PRINT '(' expression ')' ';'                                               
+    PRINT '(' expression ')'                                             
 
 
                                                                          { switch ($3->type) {

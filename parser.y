@@ -19,6 +19,7 @@
     Symbol *last_symbol_inserted=NULL;
     static Symbol *current_function = NULL;
     static Type current_switch_type;
+    static int loop_depth = 0; 
 
     void print_val(val *v);
     void free_val(val *v);
@@ -426,90 +427,77 @@ if_statement:
     ;
 
 while_statement:
-    WHILE '(' expression ')' block_statement
-                                                            {
-                                                                if ($3->type != TYPE_BOOL) {
-                                                                    yyerror("Condition in while statement must be boolean");
-                                                                    YYERROR;
+    WHILE '(' expression ')' 
+                                                                { 
+                                                                    if ($3->type != TYPE_BOOL) {
+                                                                        yyerror("Condition in madam statement must be boolean");
+                                                                        YYERROR;
+                                                                    }
+                                                                    loop_depth++;  
                                                                 }
-                                                                if ($3->data.b ==true)
-                                                                {
-                                                                    printf("Condition is true");
+    block_statement 
+                                                                { 
+                                                                    // Decrement AFTER parsing the loop body
+                                                                    loop_depth--;
+                                                                    if ($3->data.b == true) {
+                                                                        printf("Condition is true");
+                                                                    } else {
+                                                                        printf("Condition is false");
+                                                                    }
+                                                                    free($3);
                                                                 }
-                                                                else
-                                                                {
-                                                                    printf("Condition is false");
-                                                                }
-                                                                free($3);
-                                                            }
     ;
 
 do_while_statement:
-    DO block_statement WHILE '(' expression ')' 
-                                                            {
-                                                                if ($5->type != TYPE_BOOL) {
-                                                                    yyerror("Condition in do-while statement must be boolean");
-                                                                    YYERROR;
-                                                                }
-                                                                if ($5->data.b==true )
-                                                                {
-                                                                    printf("Condition is true");
-                                                                }
-                                                                else
-                                                                {
-                                                                    printf("Condition is false");
-                                                                }
-                                                                free($5);
-                                                            }
+    DO 
+                                                                    { 
+                                                                        loop_depth++; // Increment before loop body
+                                                                    }
+    block_statement 
+    WHILE '(' expression ')' 
+                                                                    { 
+                                                                        if ($6->type != TYPE_BOOL) {
+                                                                            yyerror("Condition in do-while statement must be boolean");
+                                                                            loop_depth--; // Rollback on error
+                                                                            YYERROR;
+                                                                        }
+                                                                        if ($6->data.b == true) {
+                                                                            printf("Condition is true");
+                                                                        } else {
+                                                                            printf("Condition is false");
+                                                                        }
+                                                                        free($6);
+                                                                        loop_depth--; // Decrement after loop body
+                                                                    }
     ;
 
 for_statement:
-    FOR '(' assignment_statement ';' expression ';' STEP EQUAL atomic ')' block_statement     {
-                                                                if ($5->type != TYPE_BOOL)
-                                                                 {
-                                                                    yyerror("Condition in for statement must be boolean");
-                                                                    YYERROR;
-                                                                }
-                                                                if ($5->data.b==true )
-                                                                {
-                                                                    printf("Condition is true");
-                                                                }
-                                                                else
-                                                                {
-                                                                    printf("Condition is false");
-                                                                }
-                                                                free($5);
-                                                                if ($9->type != TYPE_INT)
-                                                                 {
-                                                                    yyerror("Step value in for statement must be int");
-                                                                    YYERROR;
-                                                                }
 
-
-                                                            }
-    | FOR '(' declaration ';' expression ';' STEP EQUAL atomic ')' block_statement
-                                                            {
-                                                                if ($5->type != TYPE_BOOL)
-                                                                 {
-                                                                    yyerror("Condition in for statement must be boolean");
-                                                                    YYERROR;
-                                                                }
-                                                                if ($5->data.b==true )
-                                                                {
-                                                                    printf("Condition is true");
-                                                                }
-                                                                else
-                                                                {
-                                                                    printf("Condition is false");
-                                                                }
-                                                                free($5);
-                                                                if ($9->type != TYPE_INT)
-                                                                 {
-                                                                    yyerror("Step value in for statement must be int");
-                                                                    YYERROR;
-                                                                }
-
-                                                            }
+    FOR '(' assignment_statement ';' expression ';' STEP EQUAL atomic ')' 
+                                                                        { 
+                                                                            loop_depth++; // Increment before loop body
+                                                                            if ($5->type != TYPE_BOOL) {
+                                                                                yyerror("Condition in for statement must be boolean");
+                                                                                loop_depth--; // Rollback on error
+                                                                                YYERROR;
+                                                                            }
+                                                                            if ($5->data.b == true) {
+                                                                                printf("Condition is true");
+                                                                            } else {
+                                                                                printf("Condition is false");
+                                                                            }
+                                                                            free($5);
+                                                                            if ($9->type != TYPE_INT) {
+                                                                                yyerror("Step value in for statement must be int");
+                                                                                loop_depth--; // Rollback on error
+                                                                                YYERROR;
+                                                                            }
+                                                                        }
+    block_statement 
+                                                                            { 
+                                                                                loop_depth--; 
+                                                                            }
+                                                                    
     ;
 
 switch_statement:
@@ -603,14 +591,14 @@ return_statement:
   RETURN expression 
                                                             {
                                                                 if (!current_function) {
-                                                                yyerror("‘return’ not inside any function");
+                                                                yyerror("raga3 not inside any function");
                                                                 YYERROR;
                                                                 }
                                                                 /* mismatch between return-expr type vs. function’s declared type */
                                                                 if ($2->type != current_function->value->type) {
                                                                     char msg[128];
                                                                     snprintf(msg, sizeof msg,
-                                                                            "Return type mismatch in '%s': expected %s but got %s",
+                                                                            "raga3 type mismatch in '%s': expected %s but got %s",
                                                                             current_function->name,
                                                                             type_to_string(current_function->value->type),
                                                                             type_to_string($2->type));
@@ -623,7 +611,7 @@ return_statement:
 | RETURN 
                                                             {
                                                                 if (!current_function) {
-                                                                yyerror("‘return’ not inside any function");
+                                                                yyerror("‘raga3’ not inside any function");
                                                                 YYERROR;
                                                                 }
                                                                 /* you don’t have a TYPE_VOID, so disallow bare `return;` */
@@ -642,11 +630,17 @@ return_statement:
 
 
 break_statement:
-    BREAK 
+    BREAK  { if (loop_depth <= 0) {
+            yyerror("ekhla3 not inside any loop");
+            YYERROR;
+        }}
     ;
 
 continue_statement:
-    CONTINUE 
+    CONTINUE { if (loop_depth <= 0) {
+            yyerror("continue not inside any loop");
+            YYERROR;
+        }}
     ;
 
 print_statement:

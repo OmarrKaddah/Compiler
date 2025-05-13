@@ -1,10 +1,11 @@
-x = 5;
-
-rakam r = "hamada";
-
-
-etba3(x);
-
-{
-    etba3("good statement");
+rakam i = 0;
+madam (i < 5) {
+    law (i == 3) {
+        ekhla3;
+    }
+    i = i + 1;
 }
+etba3(i); 
+
+rakam x = 5;
+ekhla3; 

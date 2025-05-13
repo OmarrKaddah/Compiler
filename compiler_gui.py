@@ -1,6 +1,5 @@
-
 import tkinter as tk
-from tkinter import filedialog, scrolledtext, messagebox
+from tkinter import filedialog, scrolledtext, messagebox, ttk
 import subprocess
 import os
 
@@ -41,25 +40,51 @@ def load_file():
         code_input.delete("1.0", tk.END)
         code_input.insert(tk.END, code)
 
-root = tk.Tk()
-root.title("CMPN403 Mini Compiler GUI")
+def create_gui():
+    root = tk.Tk()
+    root.title("CMPN403 Mini Compiler GUI")
 
-tk.Button(root, text="Load File", command=load_file).pack(pady=5)
-code_input = scrolledtext.ScrolledText(root, width=100, height=20)
-code_input.pack(padx=10, pady=5)
+    # Create a canvas and a scrollbar
+    canvas = tk.Canvas(root)
+    scrollbar = ttk.Scrollbar(root, orient="vertical", command=canvas.yview)
+    scrollable_frame = ttk.Frame(canvas)
 
-tk.Button(root, text="Compile", command=compile_code).pack(pady=5)
+    # Configure the scrollable frame
+    scrollable_frame.bind(
+        "<Configure>",
+        lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+    )
+    canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+    canvas.configure(yscrollcommand=scrollbar.set)
 
-output_text = scrolledtext.ScrolledText(root, width=100, height=10, bg="black", fg="lime")
-output_text.pack(padx=10, pady=5)
-output_text.insert(tk.END, "Compiler output will appear here.\n")
+    # Pack the canvas and scrollbar
+    canvas.pack(side="left", fill="both", expand=True)
+    scrollbar.pack(side="right", fill="y")
 
-tk.Label(root, text="Quadruples").pack()
-quad_text = scrolledtext.ScrolledText(root, width=100, height=10)
-quad_text.pack(padx=10, pady=5)
+    # Add content to the scrollable frame
+    tk.Button(scrollable_frame, text="Load File", command=load_file).pack(pady=5)
+    global code_input
+    code_input = scrolledtext.ScrolledText(scrollable_frame, width=100, height=20)
+    code_input.pack(padx=10, pady=5)
 
-tk.Label(root, text="Symbol Table").pack()
-symtab_text = scrolledtext.ScrolledText(root, width=100, height=10)
-symtab_text.pack(padx=10, pady=5)
+    tk.Button(scrollable_frame, text="Compile", command=compile_code).pack(pady=5)
 
-root.mainloop()
+    global output_text
+    output_text = scrolledtext.ScrolledText(scrollable_frame, width=100, height=10, bg="black", fg="lime")
+    output_text.pack(padx=10, pady=5)
+    output_text.insert(tk.END, "Compiler output will appear here.\n")
+
+    tk.Label(scrollable_frame, text="Quadruples").pack()
+    global quad_text
+    quad_text = scrolledtext.ScrolledText(scrollable_frame, width=100, height=10)
+    quad_text.pack(padx=10, pady=5)
+
+    tk.Label(scrollable_frame, text="Symbol Table").pack()
+    global symtab_text
+    symtab_text = scrolledtext.ScrolledText(scrollable_frame, width=100, height=10)
+    symtab_text.pack(padx=10, pady=5)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    create_gui()

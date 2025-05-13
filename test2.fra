@@ -1,9 +1,4 @@
-rakam x=5;
-rakam easy(rakam a, rakam b){
-    etba3("hi");
-    x=a+b;
-
+ekhtar(5){
+    7ala 2+3: rakam x;
+    7ala 4: rakam h;
 }
-easy(1,3);
-
-etba3(x);

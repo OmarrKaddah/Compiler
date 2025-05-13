@@ -22,6 +22,7 @@
     Parameter *current_params = NULL; // Global tracker for parameters
     Symbol *last_symbol_inserted=NULL;
     static Symbol *current_function = NULL;
+    static Type current_switch_type;
 
     void print_val(val *v);
     void free_val(val *v);
@@ -347,8 +348,8 @@ block_statement:
     statement_list 
     '}' 
                                                         {
-                                                            printf("######### SYMBOL TABLE ##########\n");
-                                                            print_symbol_table(current_scope);
+                                                            // printf("######### SYMBOL TABLE ##########\n");
+                                                            // print_symbol_table(current_scope);
 
                                                             // Cleanup scope
                                                             SymbolTable* parent_scope = current_scope->parent;
@@ -481,15 +482,16 @@ for_statement:
     ;
 
 switch_statement:
-    SWITCH '(' expression ')' '{' case_list '}'
+    SWITCH '(' expression ')' 
                                                             {
-                                                                //TODO: Add type checking for switch expression
                                                                 if ($3->type != TYPE_INT && $3->type != TYPE_STRING) {
                                                                     yyerror("Switch expression must be of type int or string");
                                                                     YYERROR;
                                                                 }
+                                                                current_switch_type = $3->type;
                                                                 free($3);
                                                             }
+    '{' case_list '}'
     ;
 
 case_list:
@@ -500,8 +502,8 @@ case_list:
 case_statement:
     CASE expression ':' statement 
                                                             {
-                                                                if ($2->type != TYPE_INT && $2->type != TYPE_STRING) {
-                                                                    yyerror("Case expression must be of type int or string");
+                                                                if ($2->type != current_switch_type) {
+                                                                    yyerror("Case expression type does not match switch expression type");
                                                                     YYERROR;
                                                                 }
                                                                 free($2);

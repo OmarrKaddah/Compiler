@@ -28,6 +28,8 @@ typedef struct
         int b;
     } data;
 
+    char *place;
+
 } val;
 
 #endif

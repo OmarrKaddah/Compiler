@@ -4,6 +4,18 @@
     #include <stdlib.h>
     #include <stdio.h> 
     #include "symbol_table.h"
+    #include "quadruples.h"
+
+
+        // counters for temps & labels
+    static int _temp_cnt = 0;
+    static char *new_temp();
+    static int  _label_cnt = 0;
+
+    
+
+    /* return a new label name, e.g. "L1", "L2", ... */
+    static char *new_label();
 
      val* create_default_value(Type type);
     void print_val(val *v);
@@ -43,6 +55,7 @@
     int b; 
     val *v;
     Parameter *p;
+    char  *place; 
 }
 
 /* Token declarations */
@@ -114,20 +127,20 @@ function_definition:
                                                                         // Count parameters
                                                                         int param_count = 0;
                                                                         Parameter *p = $4;
-                                                                        while (p) { param_count++; p = p->next; 
-                                                                        
-                                                                        }
+                                                                        while (p) { param_count++; p = p->next; }
 
                                                                         printf("parameter count %d ---",param_count);
                                                                         // Insert function with parameters
                                                                         last_symbol_inserted = insert_symbol(current_scope, $2, func_val, SYM_FUNCTION, param_count, $4);
                                                                         current_function     = last_symbol_inserted;
                                                                         current_params = $4; // Store for block_statement
+                                                                        add_quad("LABEL", $2, "", "");
                                                                     }
     block_statement                                                 
                                                                     { 
                                                                         current_params = NULL; 
                                                                         current_function = NULL;  
+                                                                         add_quad("END", current_function->name, "", "");
                                                                     
                                                                     } // Reset
     
@@ -138,9 +151,11 @@ function_definition:
                                                                         func_val->type = $1;
                                                                         last_symbol_inserted=insert_symbol(current_scope, $2, func_val, SYM_FUNCTION,0,NULL);
                                                                         current_function = last_symbol_inserted;
-                                                                        
+                                                                         add_quad("LABEL", $2, "", "");
                                                                     }
-     block_statement                                             {   current_function = NULL;   }                                                   
+     block_statement                                          
+                                                                   {   add_quad("END", last_symbol_inserted->name, "", "");
+                                                                     current_function = NULL;   }                                                   
     ;
 parameter_declaration:
     type_specifier IDENTIFIER
@@ -673,11 +688,13 @@ expression:
                                                                                   float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                   float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                   $$->data.f = left + right;
-                                                                                  add_quad("ADD", $1, $3, $$);
+                                                                                  $$->place = new_temp();
+                                                                                  add_quad("ADD", $1->place, $3->place, $$->place);
                                                                               } else {
                                                                                   $$->type = TYPE_INT;
                                                                                   $$->data.i = $1->data.i + $3->data.i;
-                                                                                  add_quad("ADD", $1, $3, $$);
+                                                                                  $$->place = new_temp();
+                                                                                  add_quad("ADD", $1->place, $3->place, $$->place);
                                                                               }
                                                                           } else {
                                                                               yyerror("Invalid expression: cannot perform addition between non-numerical expressions.");
@@ -693,12 +710,14 @@ expression:
                                                                                    float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                    float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                    $$->data.f = left - right;
-                                                                                   add_quad("SUB", $1, $3, $$);
+                                                                                   $$->place=new_temp();
+                                                                                   add_quad("SUB", $1->place, $3->place, $$->place);
                                                                                } else {
                                                                                    $$->type = TYPE_INT;
                                                                                    $$->data.i = $1->data.i - $3->data.i;
-                                                                                      add_quad("SUB", $1, $3, $$);
-                                                                               }
+                                                                                   $$->place=new_temp();
+                                                                                     add_quad("SUB", $1->place, $3->place, $$->place);
+                                                                              }
                                                                            } else {
                                                                                yyerror("Invalid expression: cannot perform subtraction between non-numerical expressions.");
                                                                            }
@@ -713,11 +732,11 @@ expression:
                                                                                  float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                  float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                  $$->data.f = left * right;
-                                                                                    add_quad("MUL", $1, $3, $$);
+                                                                                    //add_quad("MUL", $1, $3, $$);
                                                                              } else {
                                                                                  $$->type = TYPE_INT;
                                                                                  $$->data.i = $1->data.i * $3->data.i;
-                                                                                    add_quad("MUL", $1, $3, $$);
+                                                                                    //add_quad("MUL", $1, $3, $$);
                                                                              }
                                                                          } else {
                                                                              yyerror("Invalid expression: cannot perform multiplication between non-numerical expressions.");
@@ -735,7 +754,7 @@ expression:
                                                                              float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                              float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                              $$->data.f = left / right;
-                                                                                add_quad("DIV", $1, $3, $$);
+                                                                                //add_quad("DIV", $1, $3, $$);
                                                                          } else {
                                                                              yyerror("Invalid expression: cannot perform division between non-numerical expressions.");
                                                                          }
@@ -762,22 +781,22 @@ expression:
                                                                                  case TYPE_INT:
                                                                                      result = ($1->data.i == $3->data.i);
                                                                                      $$->data.b = result;
-                                                                                     add_quad("CMP", $1, $3, $$);
+                                                                                     //add_quad("CMP", $1, $3, $$);
                                                                                      break;
                                                                                  case TYPE_FLOAT:
                                                                                      result = ($1->data.f == $3->data.f);
                                                                                      $$->data.b = result;
-                                                                                        add_quad("CMP", $1, $3, $$);
+                                                                                        //add_quad("CMP", $1, $3, $$);
                                                                                      break;
                                                                                  case TYPE_STRING:
                                                                                      result = (strcmp($1->data.s, $3->data.s) == 0);
                                                                                      $$->data.b = result;
-                                                                                        add_quad("CMP", $1, $3, $$);
+                                                                                        //add_quad("CMP", $1, $3, $$);
                                                                                      break;
                                                                                  case TYPE_BOOL:
                                                                                      result = ($1->data.b == $3->data.b);
                                                                                      $$->data.b = result;
-                                                                                        add_quad("CMP", $1, $3, $$);
+                                                                                        //add_quad("CMP", $1, $3, $$);
                                                                                      break;
                                                                                  default:
                                                                                      yyerror("Invalid type for equality comparison");
@@ -823,13 +842,13 @@ expression:
                                                                                     break;
                                                                             }
 
-                                                                            add_quad("CMP", $1, $3, cmp_res);                // [quad]
+                                                                            //add_quad("CMP", $1, $3, cmp_res);                // [quad]
 
                                                                             $$ = malloc(sizeof(val));                        // [quad]
                                                                             $$->type = TYPE_BOOL;                            // [quad]
                                                                             $$->data.b = !(cmp_res->data.b);                 // [quad]
 
-                                                                            add_quad("NOT", cmp_res, "", $$);                // [quad]
+                                                                            //add_quad("NOT", cmp_res, "", $$);                // [quad]
                                                                         }
                                                                     }
 
@@ -844,7 +863,7 @@ expression:
                                                                               $$ = malloc(sizeof(val));
                                                                               $$->type = TYPE_BOOL;
                                                                               $$->data.b = $1->data.b && $3->data.b;
-                                                                                add_quad("AND", $1, $3, $$);
+                                                                                //add_quad("AND", $1, $3, $$);
                                                                           }
                                                                       }
     | expression OR expression %prec OR
@@ -858,7 +877,7 @@ expression:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_BOOL;
                                                                                 $$->data.b = $1->data.b || $3->data.b;
-                                                                                add_quad("OR", $1, $3, $$);
+                                                                                //add_quad("OR", $1, $3, $$);
                                                                             }
                                                                         }
     | expression LESS expression %prec LESS
@@ -871,8 +890,8 @@ expression:
                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                 $$->data.b = (left < right);
                                                                                 //add quad
-                                                                                add_quad("CMP",)
-                                                                                add_quad("=",(left<right),, $$);
+                                                                                //add_quad("CMP",)
+                                                                                //add_quad("=",(left<right),, $$);
                                                                             } else {
                                                                                 yyerror("Comparison operator '<' requires numeric operands");
                                                                                 $$ = malloc(sizeof(val));
@@ -889,7 +908,7 @@ expression:
                                                                                 float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                 $$->data.b = (left <= right);
-                                                                                add_quad("LESS_EQUAL", $1, $3, $$);
+                                                                                //add_quad("LESS_EQUAL", $1, $3, $$);
                                                                             } else {
                                                                                 yyerror("Comparison operator '<=' requires numeric operands");
                                                                                 $$ = malloc(sizeof(val));
@@ -906,7 +925,7 @@ expression:
                                                                                 float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                 $$->data.b = (left > right);
-                                                                                add_quad("GREATER", $1, $3, $$);
+                                                                                //add_quad("GREATER", $1, $3, $$);
                                                                             } else {
                                                                                 yyerror("Comparison operator '>' requires numeric operands");
                                                                                 $$ = malloc(sizeof(val));
@@ -923,7 +942,7 @@ expression:
                                                                                 float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                 $$->data.b = (left >= right);
-                                                                                add_quad("GREATER_EQUAL", $1, $3, $$);
+                                                                                //add_quad("GREATER_EQUAL", $1, $3, $$);
                                                                             } else {
                                                                                 yyerror("Comparison operator '>=' requires numeric operands");
                                                                                 $$ = malloc(sizeof(val));
@@ -937,7 +956,7 @@ expression:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_INT;
                                                                                 $$->data.i = $1->data.i & $3->data.i;
-                                                                                add_quad("BIT_AND", $1, $3, $$);
+                                                                                //add_quad("BIT_AND", $1, $3, $$);
                                                                             } else {
                                                                                 yyerror("Bitwise AND requires integer operands");
                                                                                 $$ = malloc(sizeof(val));
@@ -951,7 +970,7 @@ expression:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_INT;
                                                                                 $$->data.i = $1->data.i | $3->data.i;
-                                                                                add_quad("BIT_OR", $1, $3, $$);
+                                                                                //add_quad("BIT_OR", $1, $3, $$);
                                                                             } else {
                                                                                 yyerror("Bitwise OR requires integer operands");
                                                                                 $$ = malloc(sizeof(val));
@@ -965,7 +984,7 @@ expression:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_INT;
                                                                                 $$->data.i = $1->data.i ^ $3->data.i;
-                                                                                add_quad("BIT_XOR", $1, $3, $$);
+                                                                                //add_quad("BIT_XOR", $1, $3, $$);
                                                                             } else {
                                                                                 yyerror("Bitwise XOR requires integer operands");
                                                                                 $$ = malloc(sizeof(val));
@@ -984,7 +1003,7 @@ expression:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_BOOL;
                                                                                 $$->data.b = !$2->data.b;
-                                                                                add_quad("NOT", $2, NULL, $$);
+                                                                                //add_quad("NOT", $2, NULL, $$);
 
                                                                             }
                                                                         }
@@ -999,7 +1018,7 @@ expression:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_INT;
                                                                                 $$->data.i = ~$2->data.i;
-                                                                                add_quad("BIT_NOT", $2, NULL, $$);
+                                                                                //add_quad("BIT_NOT", $2, NULL, $$);
                                                                             }
                                                                         }
     | INCR expression %prec INCR
@@ -1012,10 +1031,10 @@ expression:
                                                                             $$->type = $2->type;
                                                                             if ($2->type == TYPE_INT) {
                                                                                 $$->data.i = ++($2->data.i);
-                                                                                add_quad("INCR", $2, NULL, $$);
+                                                                                //add_quad("INCR", $2, NULL, $$);
                                                                             } else {
                                                                                 $$->data.f = ++($2->data.f);
-                                                                                add_quad("INCR", $2, NULL, $$);
+                                                                                //add_quad("INCR", $2, NULL, $$);
                                                                             }
                                                                         }
     | expression INCR %prec INCR
@@ -1028,10 +1047,10 @@ expression:
                                                                             $$->type = $1->type;
                                                                             if ($1->type == TYPE_INT) {
                                                                                 $$->data.i = $1->data.i++;
-                                                                                add_quad("INCR", $1, NULL, $$);
+                                                                                //add_quad("INCR", $1, NULL, $$);
                                                                             } else {
                                                                                 $$->data.f = $1->data.f++;
-                                                                                add_quad("INCR", $1, NULL, $$);
+                                                                                //add_quad("INCR", $1, NULL, $$);
                                                                             }
                                                                         }
    | expression MOD expression %prec MOD
@@ -1042,7 +1061,7 @@ expression:
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_INT;
                                                                                 $$->data.i = $1->data.i % $3->data.i;
-                                                                                add_quad("MOD", $1, $3, $$);
+                                                                                //add_quad("MOD", $1, $3, $$);
                                                                             } else {
                                                                                 yyerror("Modulus requires integer operands");
                                                                                 $$ = malloc(sizeof(val));
@@ -1060,7 +1079,7 @@ expression:
                                                                                 float base = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                 float exponent = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                 $$->data.f = powf(base, exponent);
-                                                                                add_quad("POWER", $1, $3, $$);
+                                                                                //add_quad("POWER", $1, $3, $$);
                                                                             } else {
                                                                                 $$->type = TYPE_INT;
                                                                                 // Simple integer power (won't handle negative exponents well)
@@ -1069,7 +1088,7 @@ expression:
                                                                                     result *= $1->data.i;
                                                                                 }
                                                                                 $$->data.i = result;
-                                                                                add_quad("POWER", $1, $3, $$);
+                                                                                //add_quad("POWER", $1, $3, $$);
                                                                             }
                                                                         } else {
                                                                             yyerror("Power operation requires numeric operands");
@@ -1181,9 +1200,13 @@ function_call:
 atomic:
     INT
                                                                         {
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = TYPE_INT;
+                                                                            
+                                                                            
+
+                                                                            $$ = create_default_value(TYPE_INT);
+                                                                            
                                                                             $$->data.i = $1;
+                                                                            //add_quad("=", yytext, "", $$->place);
                                                                         }
     | FLOAT
                                                                         {
@@ -1257,6 +1280,7 @@ val* create_default_value(Type type) {
         case TYPE_STRING: v->data.s = strdup(""); break;
         case TYPE_BOOL:   v->data.b = 0; break;
     }
+    v->place = new_temp();
     return v;
 }
 
@@ -1269,6 +1293,19 @@ const char *type_to_string(Type t) {
     case TYPE_VOID:   return "void";
     default:          return "unknown";
   }
+}
+
+static char *new_temp() {
+    static char buf[32];
+    snprintf(buf, sizeof buf, "t%d", ++_temp_cnt);
+    return strdup(buf);
+}
+
+static char *new_label() {
+  static int _lbl = 0;
+  char buf[16];
+  snprintf(buf,sizeof buf,"L%d",++_label_cnt);
+  return strdup(buf);
 }
 
 
@@ -1293,7 +1330,7 @@ int main() {
     fclose(SYMTAB_FILE);
     }
 
-    
+    print_quads();
     // Clean up global scope
     free_symbol_table(global_scope);
     return result;

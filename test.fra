@@ -1,5 +1,1 @@
-le7ad(rakam i = 0; i < 3; khatwa = 1)
-{
-    etba3(i);
-    rakam x ;
-}
+rakam x=2+3;

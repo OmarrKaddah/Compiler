@@ -348,6 +348,9 @@ block_statement:
     statement_list 
     '}' 
                                                         {
+                                                            printf("######### SYMBOL TABLE ##########\n");
+                                                            print_symbol_table(current_scope);
+
                                                             // Cleanup scope
                                                             SymbolTable* parent_scope = current_scope->parent;
                                                             free_symbol_table(current_scope);
@@ -379,7 +382,7 @@ if_statement:
                                                                     yyerror("Condition in if statement must be boolean");
                                                                     YYERROR;
                                                                 }
-                                                                if ($3->data.b )
+                                                                if ($3->data.b==true )
                                                                 {
                                                                     printf("Condition is true");
                                                                 }
@@ -398,7 +401,7 @@ while_statement:
                                                                     yyerror("Condition in while statement must be boolean");
                                                                     YYERROR;
                                                                 }
-                                                                if ($3->data.b )
+                                                                if ($3->data.b ==true)
                                                                 {
                                                                     printf("Condition is true");
                                                                 }
@@ -417,7 +420,7 @@ do_while_statement:
                                                                     yyerror("Condition in do-while statement must be boolean");
                                                                     YYERROR;
                                                                 }
-                                                                if ($5->data.b )
+                                                                if ($5->data.b==true )
                                                                 {
                                                                     printf("Condition is true");
                                                                 }
@@ -436,7 +439,7 @@ for_statement:
                                                                     yyerror("Condition in for statement must be boolean");
                                                                     YYERROR;
                                                                 }
-                                                                if ($5->data.b )
+                                                                if ($5->data.b==true )
                                                                 {
                                                                     printf("Condition is true");
                                                                 }
@@ -454,11 +457,34 @@ for_statement:
 
                                                             }
     | FOR '(' declaration ';' expression ';' STEP EQUAL atomic ')' block_statement
+                                                            {
+                                                                if ($5->type != TYPE_BOOL)
+                                                                 {
+                                                                    yyerror("Condition in for statement must be boolean");
+                                                                    YYERROR;
+                                                                }
+                                                                if ($5->data.b==true )
+                                                                {
+                                                                    printf("Condition is true");
+                                                                }
+                                                                else
+                                                                {
+                                                                    printf("Condition is false");
+                                                                }
+                                                                free($5);
+                                                                if ($9->type != TYPE_INT)
+                                                                 {
+                                                                    yyerror("Step value in for statement must be int");
+                                                                    YYERROR;
+                                                                }
+
+                                                            }
     ;
 
 switch_statement:
     SWITCH '(' expression ')' '{' case_list '}'
                                                             {
+                                                                //TODO: Add type checking for switch expression
                                                                 if ($3->type != TYPE_INT && $3->type != TYPE_STRING) {
                                                                     yyerror("Switch expression must be of type int or string");
                                                                     YYERROR;

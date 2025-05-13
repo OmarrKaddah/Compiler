@@ -1232,11 +1232,7 @@ int main() {
     Symbol *last_symbol_inserted=NULL;
     Parameter *parameter_head=NULL ;
     SYMTAB_FILE = fopen("symbols.txt", "w");
-    if (SYMTAB_FILE) {
-    print_symbol_table(global_scope); 
-    fclose(SYMTAB_FILE);
-    }
-
+    
     
     
     // Add built-in functions
@@ -1245,6 +1241,11 @@ int main() {
     last_symbol_inserted=insert_symbol(global_scope, "print", print_val, SYM_FUNCTION,0,NULL);
     
     int result = yyparse();
+    if (SYMTAB_FILE) {
+    print_symbol_table(global_scope); 
+    fclose(SYMTAB_FILE);
+    }
+
     
     // Clean up global scope
     free_symbol_table(global_scope);

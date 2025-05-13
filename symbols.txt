@@ -1,6 +1,4 @@
 
-=== SYMBOL TABLE (Scope Level: 0) ===
-
 === SYMBOL TABLE (Scope Level: 1) ===
 - x [VARIABLE]
   Value: 0
@@ -11,4 +9,4 @@
 - i [VARIABLE]
   Value: 0
 - print [FUNCTION, 0 params]
-  Value: 0
+  Value: 3342385

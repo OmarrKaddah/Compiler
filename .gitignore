@@ -26,3 +26,5 @@ parser.tab.h
 # OS files
 .DS_Store
 Thumbs.db
+
+*.txt

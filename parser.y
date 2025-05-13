@@ -207,7 +207,7 @@ function_call_statement:
                                                                 Parameter *current = $3;
                                                                 while (current) {
                                                                     printf("\nhii\n");
-                                                                    add_quad("PARAM", current->value->place, "", current->name ? current->name : "");
+                                                                   
                                                                     Parameter *next = current->next;
                                                                     current->next = reversed_args;
                                                                     reversed_args = current;
@@ -232,7 +232,7 @@ function_call_statement:
                                                                         yyerror("Argument type mismatch");
                                                                         YYERROR;
                                                                     }
-                                                                    
+                                                                     add_quad("PARAM", arg_iter->value->place, "", param->value->place ? param->name : "");
                                                                     // Copy argument value to parameter
                                                                     switch (param->value->type) {
                                                                         case TYPE_INT:

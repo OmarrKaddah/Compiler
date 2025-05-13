@@ -610,11 +610,11 @@ return_statement:
 
 
 break_statement:
-    BREAK ';'
+    BREAK 
     ;
 
 continue_statement:
-    CONTINUE ';'
+    CONTINUE 
     ;
 
 print_statement:
@@ -1177,7 +1177,7 @@ int yylineno = 1;
 void yyerror(const char* s) {
     extern char *yytext;
     fprintf(stderr,
-            "Syntax error at line %d: %s near ‘%s’\n",
+            "Syntax error at line %d: %s near '%s'\n",
             yylineno, s, yytext);
 }
 

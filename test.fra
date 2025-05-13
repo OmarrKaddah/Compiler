@@ -1,6 +1,9 @@
+rakam x = "ahmed";
+rakam h = 4;
 
-rakam h=8;
+etba3(h);
 
-faragh add(rakam a,rakam b){
-    raga3 ;
-}
+
+
+
+

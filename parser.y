@@ -1,7 +1,3 @@
-
-
-
-
 %{
     #include "val.h"
     #include <string.h>
@@ -1173,7 +1169,6 @@ atomic:
 /* track line numbers in your lexer (lexer.l):
      \n   { ++yylineno; return '\n'; }
 */
-int yylineno = 1;
 
 void syntaxError(int line, const char *msg, const char *token) {
     fprintf(stderr,

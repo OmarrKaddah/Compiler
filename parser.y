@@ -154,7 +154,7 @@ function_definition:
                                                                          add_quad("LABEL", $2, "", "");
                                                                     }
      block_statement                                          
-                                                                   {   add_quad("END", last_symbol_inserted->name, "", "");
+                                                                   {   add_quad("END", $2, "", "");
                                                                      current_function = NULL;   }                                                   
     ;
 parameter_declaration:
@@ -359,7 +359,7 @@ block_statement:
                                                                         val *v = malloc(sizeof(val));
                                                                         v->type = param->value->type;
                                                                         v->place=param->name;
-                                                                        add_quad("=",param->value->place,"",v->place);
+                                                                        //add_quad("ASSIGN",param->value->place,"",v->place);
                                                                         // Copy data based on type
                                                                         switch (v->type) {
                                                                             case TYPE_INT:    v->data.i = param->value->data.i; break;
@@ -1242,26 +1242,26 @@ atomic:
                                                                             $$ = create_default_value(TYPE_INT);
                                                                             
                                                                             $$->data.i = $1;
-                                                                            add_quad("=", yytext, "", $$->place);
+                                                                            add_quad("ASSIGN", yytext, "", $$->place);
                                                                         }
     | FLOAT
                                                                         {
                                                                             $$ =create_default_value(TYPE_FLOAT);
                                                                             
                                                                             $$->data.f = $1;
-                                                                            add_quad("=", yytext, "", $$->place);
+                                                                            add_quad("ASSIGN", yytext, "", $$->place);
                                                                         }
     | STRING
                                                                         {
                                                                             $$ = create_default_value(TYPE_STRING);
                                                                             $$->data.s = strdup($1);
-                                                                            add_quad("=", yytext, "", $$->place);
+                                                                            add_quad("ASSIGN", yytext, "", $$->place);
                                                                         }
     | BOOL
                                                                         {
                                                                             $$ = create_default_value(TYPE_BOOL);
                                                                             $$->data.b = $1;
-                                                                            add_quad("=", yytext, "", $$->place);
+                                                                            add_quad("ASSIGN", yytext, "", $$->place);
                                                                         }
     | IDENTIFIER
                                                                         {

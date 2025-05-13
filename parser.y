@@ -582,6 +582,7 @@ declaration:
                                                                         yyerror("Variable already declared");
                                                                         YYERROR;
                                                                     }
+                                                                    add_quad("ASSIGN",$4->place,"",$2);
                                                                     last_symbol_inserted=insert_symbol(current_scope, $2, $4,SYM_VARIABLE,0,NULL);
                                                                 }
     | CONST type_specifier IDENTIFIER EQUAL expression
@@ -1241,7 +1242,7 @@ atomic:
                                                                             $$ = create_default_value(TYPE_INT);
                                                                             
                                                                             $$->data.i = $1;
-                                                                            //add_quad("=", yytext, "", $$->place);
+                                                                            add_quad("=", yytext, "", $$->place);
                                                                         }
     | FLOAT
                                                                         {
@@ -1354,10 +1355,6 @@ int main() {
     
     
     
-    // Add built-in functions
-    val* print_val = malloc(sizeof(val));
-    print_val->type = TYPE_INT; // Dummy type
-    last_symbol_inserted=insert_symbol(global_scope, "print", print_val, SYM_FUNCTION,0,NULL);
     
     int result = yyparse();
     if (SYMTAB_FILE) {

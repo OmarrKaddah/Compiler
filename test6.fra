@@ -1,0 +1,8 @@
+ekhtar(2) {
+    7ala 1:
+        etba3("Case 1");
+    7ala 2:
+        etba3("Case 2");
+    7ala 3:
+        etba3("Case 3");
+}

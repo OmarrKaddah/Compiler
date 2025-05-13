@@ -1,0 +1,5 @@
+rakam i = 0;
+e3mel {
+    etba3(i);
+    i = i + 1;
+} madam(i < 3);

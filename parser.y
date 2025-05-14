@@ -323,43 +323,61 @@ argument_list:
   ;
 assignment_statement:
     IDENTIFIER EQUAL expression
-                                            {
-                                            // Lookup variable
-                                            Symbol* sym = lookup_symbol(current_scope, $1);
-                                            if (!sym) {
-                                                yyerror("Undefined variable");
-                                                YYERROR;
-                                            }
-                                            
-                                            // Check if constant
-                                            if (sym->sym_type == SYM_CONSTANT) {
-                                                yyerror("Cannot assign to constant");
-                                                YYERROR;
-                                            }
-                                            
-                                            if(sym->value->type != $3->type) {
-                                            char msg[128];
-                                            snprintf(msg, sizeof(msg), 
-                                                "Type mismatch: %s vs %s",
-                                                type_to_string(sym->value->type),
-                                                type_to_string($3->type));
-                                            yyerror(msg);
-                                            YYERROR;
-                                        }
-                                            
-                                            // Update value
-                                            switch(sym->value->type) {
-                                                case TYPE_INT: sym->value->data.i = $3->data.i; break;
-                                                case TYPE_FLOAT: sym->value->data.f = $3->data.f; break;
-                                                case TYPE_STRING: 
-                                                    free(sym->value->data.s);
-                                                    sym->value->data.s = strdup($3->data.s);
-                                                    break;
-                                                case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
-                                            }
-                                            add_quad("ASSIGN",$3->place,"",$1);
-                                            free_val($3);
-                                        }
+                                                                        {
+                                                                           
+                                                                            Symbol* sym = lookup_symbol(current_scope, $1);
+                                                                            if (!sym) {
+                                                                                yyerror("Undefined variable");
+                                                                                YYERROR;
+                                                                            }
+
+                                                                           
+                                                                            if (sym->sym_type == SYM_CONSTANT) {
+                                                                                yyerror("Cannot assign to a constant");
+                                                                                YYERROR;
+                                                                            }
+
+                                                                            if (sym->value->type != $3->type) {
+                                                                                if (sym->value->type == TYPE_INT && $3->type == TYPE_FLOAT) {
+                                                                                   
+                                                                                    char *temp = new_temp();
+                                                                                    add_quad("CONV", $3->place, "", temp);
+                                                                                    add_quad("ASSIGN", temp, "", $1);
+
+                                                                                    sym->value->data.i = (int)$3->data.f;
+                                                                                    sym->value->type = TYPE_INT; 
+                                                                                } else if (sym->value->type == TYPE_FLOAT && $3->type == TYPE_INT) {
+                                                                                 
+                                                                                    char *temp = new_temp();
+                                                                                    add_quad("CONV", $3->place, "", temp);
+                                                                                    add_quad("ASSIGN", temp, "", $1);
+
+                                                                                 
+                                                                                    sym->value->data.f = (float)$3->data.i;
+                                                                                    sym->value->type = TYPE_FLOAT; 
+                                                                                } else {
+                                                                                  
+                                                                                    yyerror("Type mismatch in assignment");
+                                                                                    YYERROR;
+                                                                                }
+                                                                            } else {
+                                                                               
+                                                                                add_quad("ASSIGN", $3->place, "", $1);
+
+                                                                             
+                                                                                switch (sym->value->type) {
+                                                                                    case TYPE_INT: sym->value->data.i = $3->data.i; break;
+                                                                                    case TYPE_FLOAT: sym->value->data.f = $3->data.f; break;
+                                                                                    case TYPE_STRING:
+                                                                                        free(sym->value->data.s);
+                                                                                        sym->value->data.s = strdup($3->data.s);
+                                                                                        break;
+                                                                                    case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
+                                                                                }
+                                                                            }
+
+                                                                            free_val($3); 
+                                                                        }
     ;
 
 block_statement:

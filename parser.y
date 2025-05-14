@@ -494,34 +494,29 @@ while_statement:
 
 
 do_while_statement:
-    DO 
+    DO
                                                             {
-                                                                // Allocate val to carry loop start label
-                                                                $$ = create_default_value(TYPE_BOOL);   // dummy type
-                                                                $$->falseLabel = new_label();           // loop start
+                                                                $$ = create_default_value(TYPE_BOOL);
+                                                                $$->falseLabel = new_label();
                                                                 add_quad("LABEL", $$->falseLabel, "", "");
                                                             }
-    block_statement 
-    WHILE '(' expression ')' 
+    block_statement
+    WHILE '(' expression ')'
                                                             {
-                                                                if ($5->type != TYPE_BOOL) {
+                                                                if ($6->type != TYPE_BOOL) {
                                                                     yyerror("Condition in do-while statement must be boolean");
                                                                     YYERROR;
                                                                 }
-
-                                                                // Optional debug printing
-                                                                if ($5->data.b)
+                                                                if ($6->data.b)
                                                                     printf("Condition is true\n");
                                                                 else
                                                                     printf("Condition is false\n");
-
-                                                                // Loop back to start if condition is true
-                                                                add_quad("JMP_TRUE", $5->place, "", $2->falseLabel);
-
-                                                                free_val($5);
+                                                                add_quad("JMP_TRUE", $6->place, "", $2->falseLabel);
+                                                                free_val($6);
                                                                 free_val($2);
                                                             }
-                                                        ;
+;
+
 
 
 for_statement:
@@ -568,8 +563,8 @@ for_statement:
                                                                 add_quad("ADD", loopVar, $9->place, stepTemp);       // stepTemp = loopVar + step
                                                                 add_quad("ASSIGN", stepTemp, "", loopVar);           // loopVar = stepTemp
 
-                                                                add_quad("JMP", "", "", $<v>2->falseLabel);          // Go back to condition
-                                                                add_quad("LABEL", $<v>2->endLabel, "", "");          // End of loop
+                                                                add_quad("JMP", "", "", $$->falseLabel);          // Go back to condition
+                                                                add_quad("LABEL", $$->endLabel, "", "");          // End of loop
 
                                                                 // Cleanup
                                                                 free_val($5);

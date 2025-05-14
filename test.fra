@@ -1,2 +1,8 @@
-rakam X=-2;
-rakam H=-X;
+rakam x=5;
+rakam y=0;
+le7ad(x=0;x<3;khatwa=1){
+    le7ad(y=0;y<3;khatwa=5){
+        ekhla3;
+    }
+    ekhla3;
+}

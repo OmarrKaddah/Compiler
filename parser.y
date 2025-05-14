@@ -603,68 +603,56 @@ do_while_statement:
 
 for_statement:
     FOR '(' assignment_statement ';' expression ';' STEP EQUAL atomic ')' 
-                                                            {
-                                                                if ($5->type != TYPE_BOOL) {
-                                                                    yyerror("Condition in for statement must be boolean");
-                                                                    YYERROR;
-                                                                }
-                                                                if ($9->type != TYPE_INT) {
-                                                                    yyerror("Step value must be int");
-                                                                    YYERROR;
-                                                                }
+    {
+        if ($5->type != TYPE_BOOL) {
+            yyerror("Condition in for statement must be boolean");
+            YYERROR;
+        }
+        if ($9->type != TYPE_INT) {
+            yyerror("Step value must be int");
+            YYERROR;
+        }
 
-                                                                // Push loop variable if not already pushed
-                                                                if (loop_var_top + 1 < MAX_NESTED_LOOPS) {
-                                                                    loop_var_top++;
-                                                                    loop_variable_stack[loop_var_top] = strdup(last_symbol_inserted->name);  // Capture variable name
-                                                                } else {
-                                                                    yyerror("Too many nested loops");
-                                                                    YYERROR;
-                                                                }
+        /* push the loop‐variable name */
+        if (loop_var_top   < MAX_NESTED_LOOPS) {
+            loop_var_top++;
+            loop_variable_stack[loop_var_top] = strdup(last_symbol_inserted->name);
+        } else {
+            yyerror("Too many nested loops");
+            YYERROR;
+        }
 
-                                                                // Create a dummy val* to carry labels
-                                                                
-                                                                $5->falseLabel = new_label();  // Loop condition
-                                                                $5->endLabel   = new_label();  // Loop exit
-                                                                break_label_stack[loop_var_top] =  $5->endLabel ;
-                                                                continue_label_stack[loop_var_top] =  $5->falseLabel;
-                                                                // Emit label before evaluating condition
-                                                                add_quad("LABEL",  $5->falseLabel, "", "");
+        /* prepare labels */
+        $5->falseLabel = new_label();  /* start/test label */
+        $5->endLabel   = new_label();  /* exit label */
+        break_label_stack[loop_var_top]    = $5->endLabel;
+        continue_label_stack[loop_var_top] = $5->falseLabel;
 
-                                                                // Check condition
-                                                                add_quad("JMP_FALSE", $5->place, "",  $5->endLabel );
-
-                                                                // Optional debug
-                                                                if ($5->data.b) printf("Condition is true\n");
-                                                                else            printf("Condition is false\n");
-                                                            }
+        /* jump into the test */
+        add_quad("LABEL",      $5->falseLabel, "",        "");
+        add_quad("JMP_FALSE",  $5->place,       "", $5->endLabel);
+    }
     block_statement
-                                                            {
-                                                                //char *loopVar = loop_variable_stack[loop_var_top];  // Use top of the loop variable stack
+    {
+        /* --- update step: loopVar = step --- */
+        char *loopVar = loop_variable_stack[loop_var_top];
+        char *stepTmp = new_temp();
+        add_quad("ADD",    loopVar, $9->place, stepTmp);
+        add_quad("ASSIGN", stepTmp, "",         loopVar);
 
-                                                                //char *stepTemp = new_temp();
-                                                                //add_quad("ADD", loopVar, $9->place, stepTemp);       // stepTemp = loopVar + step
-                                                                //add_quad("ASSIGN", stepTemp, "", loopVar);           // loopVar = stepTemp
+        /* loop back or exit */
+        add_quad("JMP",   "",         "", $5->falseLabel);
+        add_quad("LABEL", $5->endLabel, "",       "");
 
-                                                                add_quad("JMP", "", "",  $5->falseLabel);          // Go back to condition
-                                                                add_quad("LABEL",  $5->endLabel , "", "");          // End of loop
-                                                                // Emit loop exit label
-                                                                // End of loop
-                                                               
-                                                                // Cleanup
-                                                                free_val($5);
-                                                                free_val($9);
-                                                                
-
-                                                                free(loop_variable_stack[loop_var_top]);
-                                                                loop_variable_stack[loop_var_top] = NULL;
-                                                                break_label_stack[loop_var_top] = NULL;
-                                                                continue_label_stack[loop_var_top] = NULL;
-            
-                                                                loop_var_top--;
-                                                            }
-    
-    ;
+        /* cleanup */
+        free_val($5);
+        free_val($9);
+        free(loop_variable_stack[loop_var_top]);
+        loop_variable_stack[loop_var_top] = NULL;
+        break_label_stack[loop_var_top]    = NULL;
+        continue_label_stack[loop_var_top] = NULL;
+        loop_var_top--;
+    };
 
 
 

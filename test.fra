@@ -2,4 +2,4 @@ rakam i = 0;
 rakam easy(rakam h){}
 
 rakam x = 5;
-easy();
+rakam f=easy(5);

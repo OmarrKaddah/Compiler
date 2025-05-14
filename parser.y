@@ -294,7 +294,7 @@ function_call_statement:
                                                                     free(tmp);
                                                                 }
                                                             
-                                                                add_quad("JUMP",$1,"",""); 
+                                                                add_quad("CALL","","",$1); 
                                                                 // TODO: Here you would normally execute the function body
                                                                 // For now, we'll just print that the function was called
                                                                 printf("Called function: %s\n", $1);
@@ -1451,7 +1451,7 @@ function_call:
                                                                             yyerror("Argument type mismatch");
                                                                             YYERROR;
                                                                         }
-
+                                                                     add_quad("PARAM", arg_iter->value->place, "", param->value->place ? param->name : "");
                                                                         switch (param->value->type) {
                                                                             case TYPE_INT:
                                                                                 param->value->data.i = arg_iter->value->data.i;
@@ -1471,7 +1471,7 @@ function_call:
                                                                         param = param->next;
                                                                         arg_iter = arg_iter->next;
                                                                     }
-
+                                                                    
                                                                     // Free arguments (values and nodes)
                                                                     while (reversed_args) {
                                                                         Parameter *tmp = reversed_args;
@@ -1483,6 +1483,9 @@ function_call:
                                                                     // Return default value (temporary)
                                                                     //TODO: Implement actual function call
                                                                     $$ = create_default_value(func->value->type);
+                                                                    
+                                                                    $$->is_constant = false;
+                                                                    add_quad("CALL",func->name,"",$$->place);
                                                                 }
     | IDENTIFIER '(' ')'                                               
                                                                 {

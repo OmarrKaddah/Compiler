@@ -21,7 +21,7 @@
     char *skipLabel = NULL;
     char* break_label_stack[MAX_NESTED_LOOPS];
     char* continue_label_stack[MAX_NESTED_LOOPS];
-
+    val* func_def=NULL;
 
 
         // counters for temps & labels
@@ -155,6 +155,9 @@ function_definition:
                                                                     {
                                                                         val *func_val = malloc(sizeof(val));
                                                                         func_val->type = $1;
+                                                                        func_val->place = $2;
+                                                                        func_val->endLabel = new_label();
+                                                                        func_def = func_val;
 
                                                                         // Count parameters
                                                                         int param_count = 0;
@@ -173,21 +176,31 @@ function_definition:
                                                                         current_params = NULL; 
                                                                         current_function = NULL;  
                                                                          add_quad("END", $2, "", "");
+                                                                          add_quad("LABEL", func_def->endLabel, "", ""); // Add label for function end
+
+                                                                     func_def = NULL;
                                                                     
                                                                     } // Reset
     
 
     | type_specifier IDENTIFIER '(' ')'                              {
                                                                         // Similar handling for no-parameter functions
-                                                                        val* func_val = malloc(sizeof(val));
+                                                                        val* func_val = create_default_value($1);
                                                                         func_val->type = $1;
+                                                                        func_val->place = $2;
+                                                                        func_val->endLabel = new_label();
+                                                                        func_def = func_val;
                                                                         last_symbol_inserted=insert_symbol(current_scope, $2, func_val, SYM_FUNCTION,0,NULL);
                                                                         current_function = last_symbol_inserted;
                                                                          add_quad("LABEL", $2, "", "");
                                                                     }
      block_statement                                          
                                                                    {   add_quad("END", $2, "", "");
-                                                                     current_function = NULL;   }                                                   
+                                                                     current_function = NULL;   
+                                                                     add_quad("LABEL", func_def->endLabel, "", ""); // Add label for function end
+
+                                                                     func_def = NULL;
+                                                                    }                                                   
     ;
 parameter_declaration:
     type_specifier IDENTIFIER
@@ -844,6 +857,8 @@ return_statement:
                                                                     YYERROR;
                                                                
                                                                 }
+                                                                add_quad("RETURN", $2->place, "", "");
+                                                                add_quad("JUMP", "", "", func_def->endLabel);
                                                                 free_val($2);  /* if you don’t store it anywhere */
                                                             }
 | RETURN 
@@ -863,6 +878,7 @@ return_statement:
                                                                 yyerror(msg);
                                                                 YYERROR;   
                                                                 }
+                                                                add_quad("JUMP", "", "", func_def->endLabel);
                                                             }
 ;
 
@@ -981,67 +997,172 @@ expression:
                                                                         free_val($3);
                                                                     }
     | expression MINUS expression %prec MINUS
-                                                                       {
-                                                                           if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                               ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                                                                               $$ = malloc(sizeof(val));
-                                                                               if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
-                                                                                   $$->type = TYPE_FLOAT;
-                                                                                   float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                                                                                   float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                                                                                   $$->data.f = left - right;
-                                                                                   $$->place=new_temp();
-                                                                                   add_quad("SUB", $1->place, $3->place, $$->place);
-                                                                               } else {
-                                                                                   $$->type = TYPE_INT;
-                                                                                   $$->data.i = $1->data.i - $3->data.i;
-                                                                                   $$->place=new_temp();
-                                                                                     add_quad("SUB", $1->place, $3->place, $$->place);
-                                                                              }
-                                                                           } else {
-                                                                               yyerror("Invalid expression: cannot perform subtraction between non-numerical expressions.");
-                                                                           }
-                                                                       }
+                                                                    {
+                                                                        // Type checking
+                                                                        if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                            ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                            
+                                                                            $$ = malloc(sizeof(val));
+
+                                                                            // Constant Folding: If both operands are constants, compute at compile-time
+                                                                            if ($1->is_constant && $3->is_constant) {
+                                                                                $$->is_constant = true;
+                                                                                
+                                                                                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                    // Float result
+                                                                                    $$->type = TYPE_FLOAT;
+                                                                                    float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                    float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                    $$->data.f = left - right;
+                                                                                    
+                                                                                    // Store the result as a string (e.g., "5.0")
+                                                                                    char result_str[32];
+                                                                                    snprintf(result_str, sizeof(result_str), "%f", $$->data.f);
+                                                                                    $$->place = strdup(result_str);
+                                                                                } else {
+                                                                                    // Integer result
+                                                                                    $$->type = TYPE_INT;
+                                                                                    $$->data.i = $1->data.i - $3->data.i;
+                                                                                    
+                                                                                    // Store the result as a string (e.g., "5")
+                                                                                    char result_str[32];
+                                                                                    snprintf(result_str, sizeof(result_str), "%d", $$->data.i);
+                                                                                    $$->place = strdup(result_str);
+                                                                                }
+                                                                            } 
+                                                                            // Non-constant: Generate temporaries and SUB quadruple
+                                                                            else {
+                                                                                $$->is_constant = false;
+                                                                                $$->place = new_temp();  // e.g., "t1"
+
+                                                                                // Determine result type (int or float)
+                                                                                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                    $$->type = TYPE_FLOAT;
+                                                                                } else {
+                                                                                    $$->type = TYPE_INT;
+                                                                                }
+
+                                                                                // Generate SUB quadruple
+                                                                                add_quad("SUB", $1->place, $3->place, $$->place);
+                                                                            }
+                                                                        } else {
+                                                                            yyerror("Cannot subtract non-numeric types");
+                                                                            YYERROR;
+                                                                        }
+
+                                                                        // Free child expressions if not needed anymore
+                                                                        free_val($1);
+                                                                        free_val($3);
+                                                                    }
     | expression MULTIPLY expression %prec MULTIPLY
-                                                                     {
-                                                                         if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                             ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                                                                             $$ = malloc(sizeof(val));
-                                                                             if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
-                                                                                 $$->type = TYPE_FLOAT;
-                                                                                 float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                                                                                 $$->data.f = left * right;
-                                                                                 $$->place=new_temp();
+                                                                    {
+                                                                        // Type checking
+                                                                        if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                            ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                            
+                                                                            $$ = malloc(sizeof(val));
+
+                                                                            // Constant Folding: If both operands are constants, compute at compile-time
+                                                                            if ($1->is_constant && $3->is_constant) {
+                                                                                $$->is_constant = true;
+                                                                                
+                                                                                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                    // Float result
+                                                                                    $$->type = TYPE_FLOAT;
+                                                                                    float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                    float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                    $$->data.f = left * right;
+                                                                                    
+                                                                                    // Store the result as a string (e.g., "6.0")
+                                                                                    char result_str[32];
+                                                                                    snprintf(result_str, sizeof(result_str), "%f", $$->data.f);
+                                                                                    $$->place = strdup(result_str);
+                                                                                } else {
+                                                                                    // Integer result
+                                                                                    $$->type = TYPE_INT;
+                                                                                    $$->data.i = $1->data.i * $3->data.i;
+                                                                                    
+                                                                                    // Store the result as a string (e.g., "6")
+                                                                                    char result_str[32];
+                                                                                    snprintf(result_str, sizeof(result_str), "%d", $$->data.i);
+                                                                                    $$->place = strdup(result_str);
+                                                                                }
+                                                                            } 
+                                                                            // Non-constant: Generate temporaries and MUL quadruple
+                                                                            else {
+                                                                                $$->is_constant = false;
+                                                                                $$->place = new_temp();  // e.g., "t1"
+
+                                                                                // Determine result type (int or float)
+                                                                                if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                                    $$->type = TYPE_FLOAT;
+                                                                                } else {
+                                                                                    $$->type = TYPE_INT;
+                                                                                }
+
+                                                                                // Generate MUL quadruple
                                                                                 add_quad("MUL", $1->place, $3->place, $$->place);
-                                                                             } else {
-                                                                                 $$->type = TYPE_INT;
-                                                                                 $$->data.i = $1->data.i * $3->data.i;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("MUL", $1->place, $3->place, $$->place);
-                                                                             }
-                                                                         } else {
-                                                                             yyerror("Invalid expression: cannot perform multiplication between non-numerical expressions.");
-                                                                         }
-                                                                     }
+                                                                            }
+                                                                        } else {
+                                                                            yyerror("Cannot multiply non-numeric types");
+                                                                            YYERROR;
+                                                                        }
+
+                                                                        // Free child expressions if not needed anymore
+                                                                        free_val($1);
+                                                                        free_val($3);
+                                                                    }
     | expression DIVIDE expression %prec DIVIDE
-                                                                     {
-                                                                         if (($3->type == TYPE_INT && $3->data.i == 0) ||
-                                                                             ($3->type == TYPE_FLOAT && $3->data.f == 0.0f)) {
-                                                                             yyerror("Division by zero");
-                                                                         } else if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                                   ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                                                                             $$ = malloc(sizeof(val));
-                                                                             $$->type = TYPE_FLOAT;
-                                                                             float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                                                                             float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                                                                             $$->data.f = left / right;
-                                                                             $$->place=new_temp();
-                                                                            add_quad("DIV", $1->place, $3->place, $$->place);
-                                                                         } else {
-                                                                             yyerror("Invalid expression: cannot perform division between non-numerical expressions.");
-                                                                         }
-                                                                     }
+                                                                    {
+                                                                        // Division by zero check
+                                                                        if (($3->is_constant) && 
+                                                                            (($3->type == TYPE_INT && $3->data.i == 0) || 
+                                                                            ($3->type == TYPE_FLOAT && $3->data.f == 0.0f))) {
+                                                                            yyerror("Division by zero");
+                                                                            YYERROR;
+                                                                        }
+
+                                                                        // Type checking
+                                                                        if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+                                                                            ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+                                                                            
+                                                                            $$ = malloc(sizeof(val));
+
+                                                                            // Constant Folding: If both operands are constants, compute at compile-time
+                                                                            if ($1->is_constant && $3->is_constant) {
+                                                                                $$->is_constant = true;
+                                                                                
+                                                                                // Division always results in float (for consistency)
+                                                                                $$->type = TYPE_FLOAT;
+                                                                                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                                $$->data.f = left / right;
+                                                                                
+                                                                                // Store the result as a string (e.g., "2.5")
+                                                                                char result_str[32];
+                                                                                snprintf(result_str, sizeof(result_str), "%f", $$->data.f);
+                                                                                $$->place = strdup(result_str);
+                                                                            } 
+                                                                            // Non-constant: Generate temporaries and DIV quadruple
+                                                                            else {
+                                                                                $$->is_constant = false;
+                                                                                $$->place = new_temp();  // e.g., "t1"
+
+                                                                                // Division always results in float (for consistency)
+                                                                                $$->type = TYPE_FLOAT;
+
+                                                                                // Generate DIV quadruple
+                                                                                add_quad("DIV", $1->place, $3->place, $$->place);
+                                                                            }
+                                                                        } else {
+                                                                            yyerror("Cannot divide non-numeric types");
+                                                                            YYERROR;
+                                                                        }
+
+                                                                        // Free child expressions if not needed anymore
+                                                                        free_val($1);
+                                                                        free_val($3);
+                                                                    }
     | expression EQUAL_EQUAL expression %prec EQUAL_EQUAL
                                                                      {
                                                                          if ($1->type != $3->type) {

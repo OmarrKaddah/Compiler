@@ -1,15 +1,8 @@
-<<<<<<< HEAD
-rakam i = 0;
-rakam easy(rakam h){}
-
-rakam x = 5;
-rakam f=easy(5);
-=======
-rakam x=5;
-le7ad(x=0;x<3;khatwa=1){
-    le7ad(x=0;x<3;khatwa=1){
-        kamel;
-    }
-    kamel;
+rakam easy(rakam g,rakam h){
+    rakam X=8;
+    raga3 g;
+    X=5/2;
+    raga3 h;
 }
->>>>>>> origin/test22
+rakam l=4;
+rakam f=easy(5,l);

@@ -393,10 +393,10 @@ assignment_statement:
                                                                                         break;
                                                                                     case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
                                                                                 }
-                                            if (loop_var_top + 1 < MAX_NESTED_LOOPS && loop_variable_stack[loop_var_top] == NULL) {
-                                                loop_var_top++;
-                                                loop_variable_stack[loop_var_top] = strdup($1);  // push variable name
-                                            }
+                                            // if (loop_var_top + 1 < MAX_NESTED_LOOPS && loop_variable_stack[loop_var_top] == NULL) {
+                                            //     loop_var_top++;
+                                            //     loop_variable_stack[loop_var_top] = strdup($1);  // push variable name
+                                            // }
 
                                                                             }
 
@@ -627,11 +627,11 @@ for_statement:
                                                             }
     block_statement
                                                             {
-                                                                char *loopVar = loop_variable_stack[loop_var_top];  // Use top of the loop variable stack
+                                                                //char *loopVar = loop_variable_stack[loop_var_top];  // Use top of the loop variable stack
 
-                                                                char *stepTemp = new_temp();
-                                                                add_quad("ADD", loopVar, $9->place, stepTemp);       // stepTemp = loopVar + step
-                                                                add_quad("ASSIGN", stepTemp, "", loopVar);           // loopVar = stepTemp
+                                                                //char *stepTemp = new_temp();
+                                                                //add_quad("ADD", loopVar, $9->place, stepTemp);       // stepTemp = loopVar + step
+                                                                //add_quad("ASSIGN", stepTemp, "", loopVar);           // loopVar = stepTemp
 
                                                                 add_quad("JMP", "", "", for_loop_false_label);          // Go back to condition
                                                                 add_quad("LABEL", for_loop_end_label, "", "");          // End of loop

@@ -1018,6 +1018,7 @@ expression:
                                                                                 add_quad("OR", $1->place, $3->place, $$->place);
                                                                             }
                                                                         }
+    
     | expression LESS expression %prec LESS
                                                                         {
                                                                             if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
@@ -1138,35 +1139,33 @@ expression:
                                                                         }
     | NOT expression %prec NOT
                                                                         {
-                                                                            if ($2->type != TYPE_BOOL) {
-                                                                                yyerror("Logical NOT requires boolean operand");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                $$->data.b = 0;
-                                                                            } else {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                $$->data.b = !$2->data.b;
-                                                                                $$->place =new_temp();
+                                                                             if ($2->type != TYPE_BOOL) {
+                                                                            yyerror("Logical NOT requires boolean operand");
+                                                                            YYERROR;
+                                                                        } else {
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = TYPE_BOOL;
+                                                                            $$->data.b = !$2->data.b; // Perform logical NOT
+                                                                            $$->place = new_temp();   // Create a temporary for the result
+                                                                            add_quad("NOT", $2->place, "", $$->place); // Generate quadruple
+                                                                        }
 
-                                                                                add_quad("NOT", $2->place, NULL, $$->place);
-
-                                                                            }
+    free_val($2); // Free the operand
                                                                         }
     | BIT_NOT expression %prec BIT_NOT
                                                                         {
-                                                                            if ($2->type != TYPE_INT) {
+                                                                                if ($2->type != TYPE_INT) {
                                                                                 yyerror("Bitwise NOT requires integer operand");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = 0;
+                                                                                YYERROR;
                                                                             } else {
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_INT;
-                                                                                $$->data.i = ~$2->data.i;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("BIT_NOT", $2->place, NULL, $$->place);
+                                                                                $$->data.i = ~$2->data.i; // Perform bitwise NOT
+                                                                                $$->place = new_temp();   // Create a temporary for the result
+                                                                                add_quad("BIT_NOT", $2->place, "", $$->place); // Generate quadruple
                                                                             }
+
+                                                                            free_val($2); // Free the operand
                                                                         }
     | INCR expression %prec INCR
                                                                         {

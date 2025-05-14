@@ -20,13 +20,7 @@ def compile_code():
             output_text.insert(tk.END, "\n=== Errors ===\n" + stderr)
         output_text.config(state="disabled")  # Disable editing
         
-        if os.path.exists("quadruples.txt"):
-            with open("quadruples.txt", "r") as f:
-                quads = f.read()
-            quad_text.config(state="normal")  # Enable editing
-            quad_text.delete("1.0", tk.END)
-            quad_text.insert(tk.END, quads)
-            quad_text.config(state="disabled")  # Disable editing
+    
         
         if os.path.exists("symbols.txt"):
             with open("symbols.txt", "r") as f:
@@ -84,15 +78,6 @@ def create_gui():
     output_text.pack(fill="both", expand=True)
     output_text.insert(tk.END, "Compiler output will appear here.\n")
     output_text.config(state="disabled")  # Disable editing
-
-    # Quadruples Section
-    quad_frame = ttk.Frame(scrollable_frame)
-    quad_frame.pack(fill="both", expand=True, padx=10, pady=5)
-    tk.Label(quad_frame, text="Quadruples").pack(anchor="w")
-    global quad_text
-    quad_text = scrolledtext.ScrolledText(quad_frame, width=100, height=10)
-    quad_text.pack(fill="both", expand=True)
-    quad_text.config(state="disabled")  # Disable editing
 
     # Symbol Table Section
     symtab_frame = ttk.Frame(scrollable_frame)

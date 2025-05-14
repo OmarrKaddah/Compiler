@@ -93,7 +93,7 @@
 
 
 "law"                                           { return IF; } // if
-"aw"                                            { return ELSE; } // else
+"law-aw"                                        { return IFELSE; } // else
 "madam"                                         { return WHILE; } // while
 "e3mel"                                         { return DO; } // Fixed multi-word keyword
 "le7ad"                                         { return FOR; } // for

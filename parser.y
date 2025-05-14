@@ -75,14 +75,13 @@
 /* Token declarations */
 %token <i> INT
 %token <f> FLOAT
-%token <s> STRING IDENTIFIER 
+%token <s> STRING IDENTIFIER
 %token <b> BOOL
-%type <v> expression atomic function_call do_while_statement for_statement switch_statement if_statement
+%type <v> expression atomic function_call do_while_statement for_statement switch_statement
 %type <s> assignment_statement print_statement 
 %type <i> type_specifier
 %type <p> argument_list
 %type <p> parameter_list parameter_declaration
-
 
 /* Operator tokens */
 %token MINUS PLUS MULTIPLY DIVIDE MOD POWER
@@ -92,7 +91,7 @@
 %token BIT_AND BIT_OR BIT_XOR BIT_NOT
 %token PLUS_EQUAL MINUS_EQUAL TIMES_EQUAL DIVIDE_EQUAL
 %token INCR
-%token IF ELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT STEP
+%token IF IFELSE WHILE DO FOR SWITCH CASE CONST BREAK CONTINUE RETURN PRINT STEP
 %token T_INT T_FLOAT T_STRING T_BOOL T_VOID
 
 /* Operator precedence */
@@ -108,8 +107,7 @@
 %right NOT BIT_NOT 
 %right POWER
 %right INCR
-%nonassoc LOWER_THAN_ELSE
-%nonassoc ELSE
+
 
 %%
 
@@ -426,36 +424,38 @@ statement_list:
     ;
 
 if_statement:
-    IF '(' expression ')'
-                                                            {
-                                                                if ($3->type != TYPE_BOOL) { yyerror("Condition in if statement must be boolean"); YYERROR; }
+    IF '(' expression ')' 
+                                                            {if ($3->type != TYPE_BOOL) { yyerror("Condition in if statement must be boolean"); YYERROR; }
                                                                 $3->falseLabel = new_label();
                                                                 add_quad("JMP_FALSE", $3->place, "", $3->falseLabel);
-                                                            }
-    block_statement
+                                                                 }
+        block_statement
                                                             {
+                                                                add_quad("JMP", "", "", $3->falseLabel);
                                                                 add_quad("LABEL", $3->falseLabel, "", "");
                                                                 free_val($3);
+                                                                
                                                             }
-  /* | IF '(' expression ')'
-                                                            {
-                                                                if ($3->type != TYPE_BOOL) { yyerror("Condition in if statement must be boolean"); YYERROR; }
+    | IFELSE '(' expression ')' 
+    
+                                                            { if ($3->type != TYPE_BOOL) { yyerror("Condition in if statement must be boolean"); YYERROR; }
                                                                 $3->falseLabel = new_label();
                                                                 $3->endLabel   = new_label();
                                                                 add_quad("JMP_FALSE", $3->place, "", $3->falseLabel);
-                                                            }
-    block_statement
+}
+    block_statement 
                                                             {
                                                                 add_quad("JMP", "", "", $3->endLabel);
                                                                 add_quad("LABEL", $3->falseLabel, "", "");
+                                                               
                                                             }
-    ELSE block_statement
+    block_statement
                                                             {
                                                                 add_quad("LABEL", $3->endLabel, "", "");
                                                                 free_val($3);
-                                                            } */
-;
 
+                                                             }
+    ;
 
 
 

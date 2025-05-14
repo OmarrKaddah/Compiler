@@ -1,9 +1,9 @@
 
 kasr p=3.5;
 
-law(p>5){
+law-aw(p>5){
     etba3(p);
 }
-aw{
+{
     etba3(p);
 }

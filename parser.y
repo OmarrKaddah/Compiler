@@ -374,8 +374,7 @@ block_statement:
                                                             {
                                                                 // Create new scope
                                                                 SymbolTable* new_scope = create_symbol_table(current_scope);
-                                                                parent_scope=current_scope;
-                                                                current_scope = new_scope;
+                                                                  current_scope = new_scope;
 
                                                                 // Add parameters to the new scope
                                                                 if (current_params) {
@@ -417,18 +416,10 @@ block_statement:
                                                                     fprintf(stderr, "Error: Could not open symbols.txt for writing\n");
                                                                 }
                                                             // Cleanup scope
-                                                            parent_scope = current_scope->parent;
-                                                            free_symbol_table(current_scope);
-                                                           
-                                                            if(parent_scope->parent == NULL) {
-                                                                current_scope = global_scope;
-                                                                parent_scope = global_scope;
-                                                                printf("in global scope");
-                                                            }else{
-                                                                 current_scope = parent_scope;
-                                                            parent_scope=current_scope->parent;}
-                                                            
-                                                        }
+                                                             // Cleanup scope
+                                                             SymbolTable *old_scope = current_scope;
+        current_scope = old_scope->parent; // Key fix: restore parent scope
+        free_symbol_table(old_scope); }
     ;
 
 statement_list:

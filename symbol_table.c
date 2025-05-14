@@ -142,7 +142,6 @@ void free_symbol_table(SymbolTable *table)
             Symbol *tmp = cur;
             cur = cur->next;
 
-       
             if (tmp->sym_type == SYM_VARIABLE && !tmp->is_used)
             {
                 fprintf(stderr, "Warning: Variable '%s' declared but not used.\n", tmp->name);
@@ -200,57 +199,58 @@ Parameter *append_param(Parameter *head, Parameter *p2)
     cur->next = p2;
     return head;
 }
-
 void print_symbol_table(SymbolTable *table)
 {
     if (!table)
-    {
-        fprintf(SYMTAB_FILE, "Symbol Table: (NULL)\n");
         return;
-    }
 
-    fprintf(SYMTAB_FILE, "\n=== SYMBOL TABLE (Scope Level: %d) ===\n", table->scope_level);
-
-    for (int i = 0; i < TABLE_SIZE; i++)
+    // Walk up through all scopes, printing each one.
+    for (SymbolTable *cur = table; cur; cur = cur->parent)
     {
-        Symbol *sym = table->table[i];
-        while (sym)
+        // Header
+        printf("\n=== SYMBOL TABLE (Scope Level: %d) ===\n", cur->scope_level);
+        if (SYMTAB_FILE)
+            fprintf(SYMTAB_FILE, "\n=== SYMBOL TABLE (Scope Level: %d) ===\n",
+                    cur->scope_level);
+
+        // For each bucket
+        for (int i = 0; i < TABLE_SIZE; ++i)
         {
-            fprintf(SYMTAB_FILE, "- %s [%s",
-                    sym->name,
-                    sym->sym_type == SYM_FUNCTION ? "FUNCTION" : sym->sym_type == SYM_VARIABLE ? "VARIABLE" : "CONSTANT");
-
-            if (sym->sym_type == SYM_FUNCTION)
+            for (Symbol *sym = cur->table[i]; sym; sym = sym->next)
             {
-                fprintf(SYMTAB_FILE, ", %d params", sym->param_count);
-            }
-            fprintf(SYMTAB_FILE, "]\n");
+                // Build the “[TYPE]” string
+                const char *type_str =
+                    sym->sym_type == SYM_FUNCTION ? "FUNCTION" : sym->sym_type == SYM_VARIABLE ? "VARIABLE"
+                                                                                               : "CONSTANT";
 
-            fprintf(SYMTAB_FILE, "  Value: ");
-            print_val_to_file(sym->value);
-            fprintf(SYMTAB_FILE, "\n");
+                // Console
+                printf("- %s [%s]", sym->name, type_str);
+                if (sym->sym_type == SYM_FUNCTION)
+                    printf(", %d params", sym->param_count);
+                printf("  Value: ");
+                print_val(sym->value);
+                printf("\n");
 
-            if (sym->sym_type == SYM_FUNCTION && sym->params)
-            {
-                fprintf(SYMTAB_FILE, "  Parameters:\n");
-                Parameter *param = sym->params;
-                while (param)
+                // File
+                if (SYMTAB_FILE)
                 {
-                    fprintf(SYMTAB_FILE, "    - %s: ", param->name);
-                    print_val_to_file(param->value);
+                    fprintf(SYMTAB_FILE, "- %s [%s]", sym->name, type_str);
+                    if (sym->sym_type == SYM_FUNCTION)
+                        fprintf(SYMTAB_FILE, ", %d params", sym->param_count);
+                    fprintf(SYMTAB_FILE, "  Value: ");
+                    print_val_to_file(sym->value);
                     fprintf(SYMTAB_FILE, "\n");
-                    param = param->next;
                 }
             }
-
-            sym = sym->next;
         }
-    }
 
-    if (table->parent)
-    {
-        fprintf(SYMTAB_FILE, "\n--- Parent Scope ---\n");
-        print_symbol_table(table->parent);
+        // If there is another (parent) scope, print a separator
+        if (cur->parent)
+        {
+            printf("--- Parent Scope ---\n");
+            if (SYMTAB_FILE)
+                fprintf(SYMTAB_FILE, "--- Parent Scope ---\n");
+        }
     }
 }
 

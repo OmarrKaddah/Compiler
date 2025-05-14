@@ -1,7 +1,12 @@
-rakam x=0;
-le7ad(x=0;x<2;khatwa=5){
-    le7ad(x=0;x<2;khatwa=5){
-        kamel;
+rakam i = 0;
+madam (i < 5) {
+    law (i == 3) {
+        ekhla3;
+        rakam h;
     }
-    kamel;
+    i = i + 1;
+    rakam m;
 }
+etba3(i); 
+
+rakam x = 5;

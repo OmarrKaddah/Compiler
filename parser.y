@@ -527,8 +527,8 @@ while_statement:
                                                                 add_quad("JMP", "", "", $3->falseLabel);
                                                                 add_quad("LABEL", $3->endLabel, "", "");
 
-                                                                break_label_stack[loop_var_top] = NULL;
-                                                                continue_label_stack[loop_var_top] = NULL;
+                                                                //break_label_stack[loop_var_top] = NULL;
+                                                                //continue_label_stack[loop_var_top] = NULL;
                                                                 loop_var_top--;
 
                                                                 free_val($3);
@@ -579,8 +579,8 @@ do_while_statement:
 
                                                                 // Cleanup
                                                                 free_val($6);
-                                                                break_label_stack[loop_var_top] = NULL;
-                                                                continue_label_stack[loop_var_top] = NULL;
+                                                                //break_label_stack[loop_var_top] = NULL;
+                                                                //continue_label_stack[loop_var_top] = NULL;
                                                                 loop_var_top--;
                                                             }
 ;
@@ -643,10 +643,10 @@ for_statement:
                                                                 free_val($9);
                                                                 
 
-                                                                free(loop_variable_stack[loop_var_top]);
-                                                                loop_variable_stack[loop_var_top] = NULL;
-                                                                break_label_stack[loop_var_top] = NULL;
-                                                                continue_label_stack[loop_var_top] = NULL;
+                                                                //free(loop_variable_stack[loop_var_top]);
+                                                                //loop_variable_stack[loop_var_top] = NULL;
+                                                                //break_label_stack[loop_var_top] = NULL;
+                                                                //continue_label_stack[loop_var_top] = NULL;
             
                                                                 loop_var_top--;
                                                             }

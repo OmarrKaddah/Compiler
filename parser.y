@@ -41,6 +41,7 @@
 
     SymbolTable* current_scope = NULL;
     SymbolTable* global_scope = NULL;
+    SymbolTable* parent_scope = NULL;
     Parameter *current_params = NULL; // Global tracker for parameters
     Symbol *last_symbol_inserted=NULL;
     static Symbol *current_function = NULL;
@@ -370,6 +371,7 @@ block_statement:
                                                             {
                                                                 // Create new scope
                                                                 SymbolTable* new_scope = create_symbol_table(current_scope);
+                                                                parent_scope=current_scope;
                                                                 current_scope = new_scope;
 
                                                                 // Add parameters to the new scope
@@ -412,9 +414,17 @@ block_statement:
                                                                     fprintf(stderr, "Error: Could not open symbols.txt for writing\n");
                                                                 }
                                                             // Cleanup scope
-                                                            SymbolTable* parent_scope = current_scope->parent;
+                                                            parent_scope = current_scope->parent;
                                                             free_symbol_table(current_scope);
-                                                            current_scope = parent_scope;
+                                                           
+                                                            if(parent_scope->parent == NULL) {
+                                                                current_scope = global_scope;
+                                                                parent_scope = global_scope;
+                                                                printf("in global scope");
+                                                            }else{
+                                                                 current_scope = parent_scope;
+                                                            parent_scope=current_scope->parent;}
+                                                            
                                                         }
     ;
 
@@ -657,7 +667,8 @@ declaration:
                                                                         case TYPE_STRING: v->data.s = strdup(""); break;
                                                                         case TYPE_BOOL: v->data.b = 0; break;
                                                                     }
-                                                                    
+                                                                    printf("Declaring variable: %s\n", $2);
+                                                                    printf("in scope level: %d",current_scope->scope_level);
                                                                     last_symbol_inserted=insert_symbol(current_scope, $2, v,SYM_VARIABLE,0,NULL);
                                                                 }
                                                               }
@@ -674,8 +685,12 @@ declaration:
                                                                         yyerror("Variable already declared");
                                                                         YYERROR;
                                                                     }
+                                                                    printf("Declaring variable: %s\n", $2);
+                                                                    printf("in scope level: %d",current_scope->scope_level);
                                                                     add_quad("ASSIGN",$4->place,"",$2);
+
                                                                     last_symbol_inserted=insert_symbol(current_scope, $2, $4,SYM_VARIABLE,0,NULL);
+                                                                    print_symbol_table(current_scope);
                                                                 }
     | CONST type_specifier IDENTIFIER EQUAL expression
                                                                 {
@@ -1496,6 +1511,7 @@ static char *new_label() {
 
 int main() {
     global_scope = create_symbol_table(NULL);
+    parent_scope = global_scope;
     current_scope = global_scope;
     Symbol *last_symbol_inserted=NULL;
     Parameter *parameter_head=NULL ;

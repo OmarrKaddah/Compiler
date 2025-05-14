@@ -1,9 +1,13 @@
-
-kasr p=3.5;
-
-law-aw(p>5){
-    etba3(p);
+rakam i = 0;
+madam (i < 5) {
+    law (i == 3) {
+        ekhla3;
+        rakam h;
+    }
+    i = i + 1;
+    rakam m;
 }
-{
-    etba3(p);
-}
+etba3(i); 
+
+rakam x = 5;
+ekhla3;

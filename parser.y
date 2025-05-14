@@ -421,41 +421,35 @@ statement_list:
     ;
 
 if_statement:
-    IF '(' expression ')' 
+    IF '(' expression ')' block_statement
                                                             {
                                                                 if ($3->type != TYPE_BOOL) {
                                                                     yyerror("Condition in if statement must be boolean");
                                                                     YYERROR;
                                                                 }
-
-                                                                $3->falseLabel = new_label();  // else or end label
-                                                                $3->endLabel = new_label();    // label after whole if-else
-
-                                                                // Generate conditional jump to false label
-                                                                add_quad("JMP_FALSE", $3->place, "", $3->falseLabel);
-
-                                                                // Optional: print condition result for debugging
-                                                                if ($3->data.b)
-                                                                    printf("Condition is true\n");
+                                                                if ($3->data.b )
+                                                                {
+                                                                    printf("Condition is true");
+                                                                }
+                                                                free($3);
+                                                            }
+    | IF '(' expression ')' block_statement ELSE block_statement
+                                                            {
+                                                                if ($3->type != TYPE_BOOL) {
+                                                                    yyerror("Condition in if statement must be boolean");
+                                                                    YYERROR;
+                                                                }
+                                                                if ($3->data.b==true )
+                                                                {
+                                                                    printf("Condition is true");
+                                                                }
                                                                 else
-                                                                    printf("Condition is false\n");
+                                                                {
+                                                                    printf("Condition is false");
+                                                                }
+                                                                free($3);
                                                             }
-    block_statement
-                                                            {
-                                                                // After true block, jump over else
-                                                                add_quad("JMP", "", "", $3->endLabel);
-
-                                                                // Mark start of else block
-                                                                add_quad("LABEL", $3->falseLabel, "", "");
-                                                            }
-    ELSE block_statement
-                                                            {
-                                                                // End label for if-else
-                                                                add_quad("LABEL", $3->endLabel, "", "");
-                                                                free_val($3);
-                                                            }
-;
-
+    ;
 
 
 

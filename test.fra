@@ -6,5 +6,7 @@ rakam easy(rakam g,rakam h){
 }
 rakam l=4;
 rakam f=easy(5,l);
-
-bool sah=l==4;
+bool ghalat=false;
+bool h=ghalat==true;
+rakam sah=4;
+rakam q=6 * 2;

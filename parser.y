@@ -1164,368 +1164,566 @@ expression:
                                                                         free_val($3);
                                                                     }
     | expression EQUAL_EQUAL expression %prec EQUAL_EQUAL
-                                                                     {
-                                                                         if ($1->type != $3->type) {
-                                                                             yyerror("Invalid type for equality comparison");
-                                                                             $$ = malloc(sizeof(val));
-                                                                             $$->type = TYPE_BOOL;
-                                                                             $$->data.b = 0;
-                                                                             
-                                                                             // Print the failed comparison
-                                                                             printf("Comparison failed: ");
-                                                                             print_val($1);
-                                                                             printf(" == ");
-                                                                             print_val($3);
-                                                                             printf(" -> false (type mismatch)\n");
-                                                                         } else {
-                                                                             $$ = malloc(sizeof(val));
-                                                                             $$->type = TYPE_BOOL;
-                                                                             int result;
-                                                                             switch ($1->type) {
-                                                                                 case TYPE_INT:
-                                                                                     result = ($1->data.i == $3->data.i);
-                                                                                     $$->data.b = result;
-                                                                                     $$->place=new_temp();
-                                                                                     add_quad("CMP", $1->place, $3->place, $$->place);
-                                                                                     break;
-                                                                                 case TYPE_FLOAT:
-                                                                                     result = ($1->data.f == $3->data.f);
-                                                                                     $$->data.b = result;
-                                                                                     $$->place=new_temp();
-                                                                                    add_quad("CMP", $1->place, $3->place, $$->place);
-                                                                                     break;
-                                                                                 case TYPE_STRING:
-                                                                                     result = (strcmp($1->data.s, $3->data.s) == 0);
-                                                                                     $$->data.b = result;
-                                                                                         $$->place=new_temp();
-                                                                                    add_quad("CMP", $1->place, $3->place, $$->place);
-                                                                                     break;
-                                                                                 case TYPE_BOOL:
-                                                                                     result = ($1->data.b == $3->data.b);
-                                                                                     $$->data.b = result;
-                                                                                         $$->place=new_temp();
-                                                                                    add_quad("CMP", $1->place, $3->place, $$->place);
-                                                                                     break;
-                                                                                 default:
-                                                                                     yyerror("Invalid type for equality comparison");
-                                                                                     $$->data.b = 0;
-                                                                                     result = 0;
-                                                                             }
-                                                                             
-                                                                             // Print the comparison and result
-                                                                             printf("Comparison: ");
-                                                                             print_val($1);
-                                                                             printf(" == ");
-                                                                             print_val($3);
-                                                                             printf(" -> %s\n", result ? "true" : "false");
-                                                                         }
-                                                                         
-                                                                         // Free the operands
-                                                                         free_val($1);
-                                                                         free_val($3);
-                                                                     }
-    | expression NOT_EQUAL expression %prec NOT_EQUAL
                                                                     {
+                                                                        // Type checking
                                                                         if ($1->type != $3->type) {
-                                                                            yyerror("Invalid type for inequality comparison");
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = TYPE_BOOL;
-                                                                            $$->data.b = 1;
-                                                                        } else {
-                                                                            // Allocate comparison result
-                                                                            val* cmp_res = malloc(sizeof(val));              // [quad]
-                                                                            cmp_res->type = TYPE_BOOL;                       // [quad]
+                                                                            yyerror("Cannot compare different types");
+                                                                            YYERROR;
+                                                                        }
+
+                                                                        $$ = malloc(sizeof(val));
+                                                                        $$->type = TYPE_BOOL;
+
+                                                                        // Constant Folding: If both operands are constants, compute at compile-time
+                                                                        if ($1->is_constant && $3->is_constant) {
+                                                                            $$->is_constant = true;
+                                                                            int result;
+
                                                                             switch ($1->type) {
                                                                                 case TYPE_INT:
-                                                                                    $$->data.b = ($1->data.i == $3->data.i);
+                                                                                    result = ($1->data.i == $3->data.i);
                                                                                     break;
                                                                                 case TYPE_FLOAT:
-                                                                                    $$->data.b = ($1->data.f == $3->data.f);
+                                                                                    result = ($1->data.f == $3->data.f);
                                                                                     break;
                                                                                 case TYPE_STRING:
-                                                                                    $$->data.b = (strcmp($1->data.s, $3->data.s) == 0);
+                                                                                    result = (strcmp($1->data.s, $3->data.s) == 0);
                                                                                     break;
                                                                                 case TYPE_BOOL:
-                                                                                    $$->data.b = ($1->data.b == $3->data.b);
+                                                                                    result = ($1->data.b == $3->data.b);
                                                                                     break;
+                                                                                default:
+                                                                                    yyerror("Invalid type for equality comparison");
+                                                                                    result = 0;
                                                                             }
 
-                                                                            $$->place=new_temp();
-
-                                                                            
-
-                                                                            add_quad("NOT_EQUAL", $1->place, $3->place, $$->place);                // [quad]
+                                                                            $$->data.b = result;
+                                                                            $$->place = strdup(result ? "true" : "false");  // Store as string literal
                                                                         }
+                                                                        // Non-constant: Generate CMP quadruple
+                                                                        else {
+                                                                            $$->is_constant = false;
+                                                                            $$->place = new_temp();  // e.g., "t1"
+                                                                            add_quad("CMP", $1->place, $3->place, $$->place);  // Compare and store boolean result
+                                                                        }
+
+                                                                        // Free child expressions
+                                                                        free_val($1);
+                                                                        free_val($3);
+                                                                    }
+    | expression NOT_EQUAL expression %prec NOT_EQUAL
+                                                                    {
+                                                                        // Type checking
+                                                                        if ($1->type != $3->type) {
+                                                                            yyerror("Cannot compare different types");
+                                                                            YYERROR;
+                                                                        }
+
+                                                                        $$ = malloc(sizeof(val));
+                                                                        $$->type = TYPE_BOOL;
+
+                                                                        // Constant Folding: If both operands are constants, compute at compile-time
+                                                                        if ($1->is_constant && $3->is_constant) {
+                                                                            $$->is_constant = true;
+                                                                            int result;
+
+                                                                            switch ($1->type) {
+                                                                                case TYPE_INT:
+                                                                                    result = ($1->data.i != $3->data.i);
+                                                                                    break;
+                                                                                case TYPE_FLOAT:
+                                                                                    result = ($1->data.f != $3->data.f);
+                                                                                    break;
+                                                                                case TYPE_STRING:
+                                                                                    result = (strcmp($1->data.s, $3->data.s) != 0);
+                                                                                    break;
+                                                                                case TYPE_BOOL:
+                                                                                    result = ($1->data.b != $3->data.b);
+                                                                                    break;
+                                                                                default:
+                                                                                    yyerror("Invalid type for inequality comparison");
+                                                                                    result = 0;
+                                                                            }
+
+                                                                            $$->data.b = result;
+                                                                            $$->place = strdup(result ? "true" : "false");  // Store as string literal
+                                                                        }
+                                                                        // Non-constant: Generate NEQ (or CMP + NOT) quadruples
+                                                                        else {
+                                                                            $$->is_constant = false;
+                                                                            $$->place = new_temp();  // e.g., "t1"
+
+                                                                            // Option 1: Use a dedicated NEQ quadruple
+                                                                            add_quad("NEQ", $1->place, $3->place, $$->place);
+
+                                                                            // Option 2: Use CMP followed by NOT (if NEQ is unavailable)
+                                                                            // val* cmp_temp = new_temp();
+                                                                            // add_quad("CMP", $1->place, $3->place, cmp_temp);
+                                                                            // add_quad("NOT", cmp_temp, _, $$->place);
+                                                                        }
+
+                                                                        // Free child expressions
+                                                                        free_val($1);
+                                                                        free_val($3);
                                                                     }
 
     | expression AND expression %prec AND
-                                                                      {
-                                                                          if ($1->type != TYPE_BOOL || $3->type != TYPE_BOOL) {
-                                                                              yyerror("Logical AND requires boolean operands");
-                                                                              $$ = malloc(sizeof(val));
-                                                                              $$->type = TYPE_BOOL;
-                                                                              $$->data.b = 0;
-                                                                          } else {
-                                                                              $$ = malloc(sizeof(val));
-                                                                              $$->type = TYPE_BOOL;
-                                                                              $$->data.b = $1->data.b && $3->data.b;
+                                                                    {
+                                                                        if ($1->type != TYPE_BOOL || $3->type != TYPE_BOOL) {
+                                                                            yyerror("Logical AND requires boolean operands");
+                                                                            YYERROR;
+                                                                        }
+                                                                        $$ = malloc(sizeof(val));
+                                                                        $$->type = TYPE_BOOL;
 
-                                                                              $$->place=new_temp();
+                                                                        if ($1->is_constant && $3->is_constant) {
+                                                                            // constant-fold at compile time
+                                                                            $$->is_constant = true;
+                                                                            $$->data.b = $1->data.b && $3->data.b;
+                                                                            $$->place = strdup($$->data.b ? "true" : "false");
+                                                                        } else {
+                                                                            // runtime: emit an AND quad
+                                                                            $$->is_constant = false;
+                                                                            $$->place = new_temp();
+                                                                            add_quad("AND", $1->place, $3->place, $$->place);
+                                                                        }
 
-                                                                                add_quad("AND", $1->place, $3->place, $$->place);
-                                                                          }
-                                                                      }
-    | expression OR expression %prec OR
-                                                                        {
-                                                                            if ($1->type != TYPE_BOOL || $3->type != TYPE_BOOL) {
-                                                                                yyerror("Logical OR requires boolean operands");
+                                                                        free_val($1);
+                                                                        free_val($3);
+                                                                    }
+
+| expression OR expression %prec OR
+                                                            {
+                                                                if ($1->type != TYPE_BOOL || $3->type != TYPE_BOOL) {
+                                                                    yyerror("Logical OR requires boolean operands");
+                                                                    YYERROR;
+                                                                }
+                                                                $$ = malloc(sizeof(val));
+                                                                $$->type = TYPE_BOOL;
+
+                                                                if ($1->is_constant && $3->is_constant) {
+                                                                    // constant-fold at compile time
+                                                                    $$->is_constant = true;
+                                                                    $$->data.b = $1->data.b || $3->data.b;
+                                                                    $$->place = strdup($$->data.b ? "true" : "false");
+                                                                } else {
+                                                                    // runtime: emit an OR quad
+                                                                    $$->is_constant = false;
+                                                                    $$->place = new_temp();
+                                                                    add_quad("OR", $1->place, $3->place, $$->place);
+                                                                }
+
+                                                                free_val($1);
+                                                                free_val($3);
+                                                            }
+
+| expression LESS expression %prec LESS
+                                                                {
+                                                                    if (!(($1->type == TYPE_INT || $1->type == TYPE_FLOAT) &&
+                                                                        ($3->type == TYPE_INT || $3->type == TYPE_FLOAT))) {
+                                                                        yyerror("Comparison operator '<' requires numeric operands");
+                                                                        YYERROR;
+                                                                    }
+                                                                    $$ = malloc(sizeof(val));
+                                                                    $$->type = TYPE_BOOL;
+
+                                                                    if ($1->is_constant && $3->is_constant) {
+                                                                        // constant-fold at compile time
+                                                                        $$->is_constant = true;
+                                                                        float left  = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                        float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                        $$->data.b = (left < right);
+                                                                        $$->place = strdup($$->data.b ? "true" : "false");
+                                                                    } else {
+                                                                        // runtime: emit a LESS_THAN quad
+                                                                        $$->is_constant = false;
+                                                                        $$->place = new_temp();
+                                                                        add_quad("LESS_THAN", $1->place, $3->place, $$->place);
+                                                                    }
+
+                                                                    free_val($1);
+                                                                    free_val($3);
+                                                                }
+| expression LESS_EQUAL expression %prec LESS_EQUAL
+                                                                {
+                                                                    // ensure numeric operands
+                                                                    if (!(( $1->type == TYPE_INT || $1->type == TYPE_FLOAT ) &&
+                                                                        ( $3->type == TYPE_INT || $3->type == TYPE_FLOAT ))) {
+                                                                    yyerror("Comparison operator '<=' requires numeric operands");
+                                                                    YYERROR;
+                                                                    }
+
+                                                                    $$ = malloc(sizeof(val));
+                                                                    $$->type = TYPE_BOOL;
+
+                                                                    if ($1->is_constant && $3->is_constant) {
+                                                                    // compile-time
+                                                                    $$->is_constant = true;
+                                                                    float left  = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                    float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                    $$->data.b = (left <= right);
+                                                                    $$->place  = strdup($$->data.b ? "true" : "false");
+                                                                    } else {
+                                                                    // runtime
+                                                                    $$->is_constant = false;
+                                                                    $$->place       = new_temp();
+                                                                    add_quad("LESS_EQ", $1->place, $3->place, $$->place);
+                                                                    }
+
+                                                                    free_val($1);
+                                                                    free_val($3);
+                                                                }
+
+| expression GREATER expression %prec GREATER
+                                                                            {
+                                                                                // ensure numeric operands
+                                                                                if (!(( $1->type == TYPE_INT || $1->type == TYPE_FLOAT ) &&
+                                                                                    ( $3->type == TYPE_INT || $3->type == TYPE_FLOAT ))) {
+                                                                                yyerror("Comparison operator '>' requires numeric operands");
+                                                                                YYERROR;
+                                                                                }
+
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_BOOL;
-                                                                                $$->data.b = 0;
-                                                                            } else {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                $$->data.b = $1->data.b || $3->data.b;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("OR", $1->place, $3->place, $$->place);
-                                                                            }
-                                                                        }
-    
-    | expression LESS expression %prec LESS
-                                                                        {
-                                                                            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                                                                                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                                                                                $$->data.b = (left < right);
-                                                                                $$->place=new_temp();
-                                                                                add_quad("LESS_THAN",$1->place,$3->place,$$->place);
-                                                               
-                                                                            } else {
-                                                                                yyerror("Comparison operator '<' requires numeric operands");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                $$->data.b = 0;
-                                                                            }
-                                                                        }
-    | expression LESS_EQUAL expression %prec LESS_EQUAL
-                                                                        {
-                                                                            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                                                                                float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                                                                                $$->data.b = (left <= right);
-                                                                                $$->place=new_temp();
-                                                                                add_quad("LESS_EQUAL", $1->place, $3->place, $$->place);
-                                                                            } else {
-                                                                                yyerror("Comparison operator '<=' requires numeric operands");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                $$->data.b = 0;
-                                                                            }
-                                                                        }
-    | expression GREATER expression %prec GREATER
-                                                                        {
-                                                                            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+
+                                                                                if ($1->is_constant && $3->is_constant) {
+                                                                                // compile-time
+                                                                                $$->is_constant = true;
+                                                                                float left  = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                 $$->data.b = (left > right);
-                                                                                $$->place=new_temp();
+                                                                                $$->place  = strdup($$->data.b ? "true" : "false");
+                                                                                } else {
+                                                                                // runtime
+                                                                                $$->is_constant = false;
+                                                                                $$->place       = new_temp();
                                                                                 add_quad("GREATER", $1->place, $3->place, $$->place);
-                                                                            } else {
-                                                                                yyerror("Comparison operator '>' requires numeric operands");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                $$->data.b = 0;
+                                                                                }
+
+                                                                                free_val($1);
+                                                                                free_val($3);
                                                                             }
-                                                                        }
-    | expression GREATER_EQUAL expression %prec GREATER_EQUAL
-                                                                        {
-                                                                            if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                                ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
+
+| expression GREATER_EQUAL expression %prec GREATER_EQUAL
+                                                                            {
+                                                                                // ensure numeric operands
+                                                                                if (!(( $1->type == TYPE_INT || $1->type == TYPE_FLOAT ) &&
+                                                                                    ( $3->type == TYPE_INT || $3->type == TYPE_FLOAT ))) {
+                                                                                yyerror("Comparison operator '>=' requires numeric operands");
+                                                                                YYERROR;
+                                                                                }
+
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_BOOL;
-                                                                                float left = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+
+                                                                                if ($1->is_constant && $3->is_constant) {
+                                                                                // compile-time
+                                                                                $$->is_constant = true;
+                                                                                float left  = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                 $$->data.b = (left >= right);
-                                                                                $$->place=new_temp();
-                                                                                add_quad("GREATER_EQUAL", $1->place, $3->place, $$->place);
-                                                                            } else {
-                                                                                yyerror("Comparison operator '>=' requires numeric operands");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                $$->data.b = 0;
-                                                                            }
-                                                                        }
-    | expression BIT_AND expression %prec BIT_AND
-                                                                        {
-                                                                            if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = $1->data.i & $3->data.i;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("BIT_AND", $1->place, $3->place, $$->place);
-                                                                            } else {
-                                                                                yyerror("Bitwise AND requires integer operands");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = 0;
-                                                                            }
-                                                                        }
-    | expression BIT_OR expression %prec BIT_OR
-                                                                        {
-                                                                            if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = $1->data.i | $3->data.i;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("BIT_OR", $1->place, $3->place, $$->place);
-                                                                            } else {
-                                                                                yyerror("Bitwise OR requires integer operands");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = 0;
-                                                                            }
-                                                                        }
-    | expression BIT_XOR expression %prec BIT_XOR
-                                                                        {
-                                                                            if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = $1->data.i ^ $3->data.i;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("BIT_XOR", $1->place, $3->place, $$->place);
-                                                                            } else {
-                                                                                yyerror("Bitwise XOR requires integer operands");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = 0;
-                                                                            }
-                                                                        }
-    | NOT expression %prec NOT
-                                                                        {
-                                                                             if ($2->type != TYPE_BOOL) {
-                                                                            yyerror("Logical NOT requires boolean operand");
-                                                                            YYERROR;
-                                                                        } else {
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = TYPE_BOOL;
-                                                                            $$->data.b = !$2->data.b; // Perform logical NOT
-                                                                            $$->place = new_temp();   // Create a temporary for the result
-                                                                            add_quad("NOT", $2->place, "", $$->place); // Generate quadruple
-                                                                        }
-
-    free_val($2); // Free the operand
-                                                                        }
-    | BIT_NOT expression %prec BIT_NOT
-                                                                        {
-                                                                                if ($2->type != TYPE_INT) {
-                                                                                yyerror("Bitwise NOT requires integer operand");
-                                                                                YYERROR;
-                                                                            } else {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = ~$2->data.i; // Perform bitwise NOT
-                                                                                $$->place = new_temp();   // Create a temporary for the result
-                                                                                add_quad("BIT_NOT", $2->place, "", $$->place); // Generate quadruple
-                                                                            }
-
-                                                                            free_val($2); // Free the operand
-                                                                        }
-    | INCR expression %prec INCR
-                                                                        {
-                                                                            if ($2->type != TYPE_INT && $2->type != TYPE_FLOAT) {
-                                                                                yyerror("Increment requires numeric operand");
-                                                                                YYERROR;
-                                                                            }
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = $2->type;
-                                                                            if ($2->type == TYPE_INT) {
-                                                                                $$->data.i = ++($2->data.i);
-                                                                                $$->place=new_temp();
-                                                                                add_quad("INCR", $2->place, NULL, $$->place);
-                                                                            } else {
-                                                                                $$->data.f = ++($2->data.f);
-                                                                                $$->place=new_temp();
-                                                                                add_quad("INCR", $2->place, NULL, $$->place);
-                                                                            }
-                                                                        }
-    | expression INCR %prec INCR
-                                                                        {
-                                                                            if ($1->type != TYPE_INT && $1->type != TYPE_FLOAT) {
-                                                                                yyerror("Increment requires numeric operand");
-                                                                                YYERROR;
-                                                                            }
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = $1->type;
-                                                                            if ($1->type == TYPE_INT) {
-                                                                                $$->data.i = $1->data.i++;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("INCR", $1->place, NULL, $$->place);
-                                                                            } else {
-                                                                                $$->data.f = $1->data.f++;
-                                                                                add_quad("INCR", $1->place, NULL, $$->place);
-                                                                            }
-                                                                        }
-   | expression MOD expression %prec MOD
-                                                                        {
-                                                                            if ($3->type == TYPE_INT && $3->data.i == 0) {
-                                                                                yyerror("Modulus by zero");
-                                                                            } else if ($1->type == TYPE_INT && $3->type == TYPE_INT) {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = $1->data.i % $3->data.i;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("MOD", $1->place, $3->place, $$->place);
-                                                                            } else {
-                                                                                yyerror("Modulus requires integer operands");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = 0;
-                                                                            }
-                                                                        }
-    | expression POWER expression %prec POWER
-                                                                    {
-                                                                        if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-                                                                            ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
-                                                                            $$ = malloc(sizeof(val));
-                                                                            if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
-                                                                                $$->type = TYPE_FLOAT;
-                                                                                float base = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
-                                                                                float exponent = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
-                                                                                $$->data.f = powf(base, exponent);
-                                                                                $$->place=new_temp();
-                                                                                add_quad("POWER", $1->place, $3->place, $$->place);
-                                                                            } else {
-                                                                                $$->type = TYPE_INT;
-                                                                                // Simple integer power (won't handle negative exponents well)
-                                                                                int result = 1;
-                                                                                for (int i = 0; i < $3->data.i; i++) {
-                                                                                    result *= $1->data.i;
+                                                                                $$->place  = strdup($$->data.b ? "true" : "false");
+                                                                                } else {
+                                                                                // runtime
+                                                                                $$->is_constant = false;
+                                                                                $$->place       = new_temp();
+                                                                                add_quad("GT_EQ", $1->place, $3->place, $$->place);
                                                                                 }
-                                                                                $$->data.i = result;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("POWER", $1->place, $3->place, $$->place);
+
+                                                                                free_val($1);
+                                                                                free_val($3);
                                                                             }
-                                                                        } else {
-                                                                            yyerror("Power operation requires numeric operands");
-                                                                            $$ = malloc(sizeof(val));
-                                                                            $$->type = TYPE_INT;
-                                                                            $$->data.i = 0;
-                                                                        }
+
+    | expression BIT_AND expression %prec BIT_AND
+                                                                            {
+                                                                                if ($1->type != TYPE_INT || $3->type != TYPE_INT) {
+                                                                                yyerror("Bitwise AND requires integer operands");
+                                                                                YYERROR;
+                                                                                }
+                                                                                $$ = malloc(sizeof(val));
+                                                                                $$->type = TYPE_INT;
+
+                                                                                if ($1->is_constant && $3->is_constant) {
+                                                                                // constant-fold
+                                                                                $$->is_constant = true;
+                                                                                $$->data.i    = $1->data.i & $3->data.i;
+                                                                                // store as literal string
+                                                                                char buf[32];
+                                                                                snprintf(buf, sizeof buf, "%d", $$->data.i);
+                                                                                $$->place     = strdup(buf);
+                                                                                } else {
+                                                                                // runtime quad
+                                                                                $$->is_constant = false;
+                                                                                $$->place       = new_temp();
+                                                                                add_quad("BIT_AND", $1->place, $3->place, $$->place);
+                                                                                }
+
+                                                                                free_val($1);
+                                                                                free_val($3);
+                                                                            }
+
+| expression BIT_OR expression %prec BIT_OR
+                                                            {
+                                                                if ($1->type != TYPE_INT || $3->type != TYPE_INT) {
+                                                                yyerror("Bitwise OR requires integer operands");
+                                                                YYERROR;
+                                                                }
+                                                                $$ = malloc(sizeof(val));
+                                                                $$->type = TYPE_INT;
+
+                                                                if ($1->is_constant && $3->is_constant) {
+                                                                $$->is_constant = true;
+                                                                $$->data.i    = $1->data.i | $3->data.i;
+                                                                char buf[32];
+                                                                snprintf(buf, sizeof buf, "%d", $$->data.i);
+                                                                $$->place     = strdup(buf);
+                                                                } else {
+                                                                $$->is_constant = false;
+                                                                $$->place       = new_temp();
+                                                                add_quad("BIT_OR", $1->place, $3->place, $$->place);
+                                                                }
+
+                                                                free_val($1);
+                                                                free_val($3);
+                                                            }
+
+| expression BIT_XOR expression %prec BIT_XOR
+                                                            {
+                                                                if ($1->type != TYPE_INT || $3->type != TYPE_INT) {
+                                                                yyerror("Bitwise XOR requires integer operands");
+                                                                YYERROR;
+                                                                }
+                                                                $$ = malloc(sizeof(val));
+                                                                $$->type = TYPE_INT;
+
+                                                                if ($1->is_constant && $3->is_constant) {
+                                                                $$->is_constant = true;
+                                                                $$->data.i    = $1->data.i ^ $3->data.i;
+                                                                char buf[32];
+                                                                snprintf(buf, sizeof buf, "%d", $$->data.i);
+                                                                $$->place     = strdup(buf);
+                                                                } else {
+                                                                $$->is_constant = false;
+                                                                $$->place       = new_temp();
+                                                                add_quad("BIT_XOR", $1->place, $3->place, $$->place);
+                                                                }
+
+                                                                free_val($1);
+                                                                free_val($3);
+                                                            }
+
+   | NOT expression %prec NOT
+                                                            {
+                                                                if ($2->type != TYPE_BOOL) {
+                                                                yyerror("Logical NOT requires boolean operand");
+                                                                YYERROR;
+                                                                }
+
+                                                                $$ = malloc(sizeof(val));
+                                                                $$->type = TYPE_BOOL;
+
+                                                                if ($2->is_constant) {
+                                                                // constant-fold at compile time
+                                                                $$->is_constant = true;
+                                                                $$->data.b     = !$2->data.b;
+                                                                $$->place      = strdup($$->data.b ? "true" : "false");
+                                                                } else {
+                                                                // runtime: emit NOT quad
+                                                                $$->is_constant = false;
+                                                                $$->place       = new_temp();
+                                                                add_quad("NOT", $2->place, "", $$->place);
+                                                                }
+
+                                                                free_val($2);
+                                                            }
+
+| BIT_NOT expression %prec BIT_NOT
+                                                                {
+                                                                    if ($2->type != TYPE_INT) {
+                                                                    yyerror("Bitwise NOT requires integer operand");
+                                                                    YYERROR;
                                                                     }
-    | '(' expression ')'
-                                                                        {
-                                                                            $$ = $2;
+
+                                                                    $$ = malloc(sizeof(val));
+                                                                    $$->type = TYPE_INT;
+
+                                                                    if ($2->is_constant) {
+                                                                    // constant-fold at compile time
+                                                                    $$->is_constant = true;
+                                                                    $$->data.i     = ~$2->data.i;
+                                                                    char buf[32];
+                                                                    snprintf(buf, sizeof buf, "%d", $$->data.i);
+                                                                    $$->place      = strdup(buf);
+                                                                    } else {
+                                                                    // runtime: emit BIT_NOT quad
+                                                                    $$->is_constant = false;
+                                                                    $$->place       = new_temp();
+                                                                    add_quad("BIT_NOT", $2->place, "", $$->place);
+                                                                    }
+
+                                                                    free_val($2);
+                                                                }
+
+    | INCR expression %prec INCR
+                                                                {
+                                                                    // prefix ++x: first increment, then return the new value
+                                                                    if (!($2->type == TYPE_INT || $2->type == TYPE_FLOAT)) {
+                                                                    yyerror("Increment requires numeric operand");
+                                                                    YYERROR;
+                                                                    }
+                                                                    $$ = malloc(sizeof(val));
+                                                                    $$->type = $2->type;
+
+                                                                    if ($2->is_constant) {
+                                                                    // compile-time
+                                                                    $$->is_constant = true;
+                                                                    if ($2->type == TYPE_INT) {
+                                                                        $$->data.i  = $2->data.i + 1;
+                                                                    } else {
+                                                                        $$->data.f  = $2->data.f + 1.0f;
+                                                                    }
+                                                                    // literal result
+                                                                    char buf[32];
+                                                                    if ($2->type == TYPE_INT)
+                                                                        snprintf(buf,sizeof buf,"%d",$$->data.i);
+                                                                    else
+                                                                        snprintf(buf,sizeof buf,"%f",$$->data.f);
+                                                                    $$->place = strdup(buf);
+                                                                    } else {
+                                                                    // runtime: emit an INCR quad and capture its result
+                                                                    $$->is_constant = false;
+                                                                    $$->place       = new_temp();
+                                                                    add_quad("INCR", $2->place, "", $$->place);
+                                                                    }
+
+                                                                    free_val($2);
+                                                                }
+
+| expression INCR %prec INCR
+                                                                    {
+                                                                        // postfix x++: return the old value, then increment
+                                                                        if (!($1->type == TYPE_INT || $1->type == TYPE_FLOAT)) {
+                                                                        yyerror("Increment requires numeric operand");
+                                                                        YYERROR;
                                                                         }
-                                                                    ;
+                                                                        $$ = malloc(sizeof(val));
+                                                                        $$->type = $1->type;
+
+                                                                        if ($1->is_constant) {
+                                                                        // compile-time
+                                                                        $$->is_constant = true;
+                                                                        if ($1->type == TYPE_INT) {
+                                                                            $$->data.i  = $1->data.i;
+                                                                        } else {
+                                                                            $$->data.f  = $1->data.f;
+                                                                        }
+                                                                        char buf[32];
+                                                                        if ($1->type == TYPE_INT)
+                                                                            snprintf(buf,sizeof buf,"%d",$$->data.i);
+                                                                        else
+                                                                            snprintf(buf,sizeof buf,"%f",$$->data.f);
+                                                                        $$->place = strdup(buf);
+                                                                        } else {
+                                                                        // runtime:
+                                                                        // 1) copy old into a temp
+                                                                        $$->is_constant = false;
+                                                                        $$->place       = new_temp();
+                                                                        add_quad("ASSIGN", $1->place, "", $$->place);
+                                                                        // 2) increment the original
+                                                                        add_quad("INCR", $1->place, "", $1->place);
+                                                                        }
+
+                                                                        free_val($1);
+                                                                    }
+
+   | expression MOD expression %prec MOD
+                                                                {
+                                                                    // only integer mod
+                                                                    if ($1->type != TYPE_INT || $3->type != TYPE_INT) {
+                                                                    yyerror("Modulus requires integer operands");
+                                                                    YYERROR;
+                                                                    }
+                                                                    $$ = malloc(sizeof(val));
+                                                                    $$->type = TYPE_INT;
+
+                                                                    // division by zero check
+                                                                    if ($3->is_constant && $3->data.i == 0) {
+                                                                    yyerror("Modulus by zero");
+                                                                    YYERROR;
+                                                                    }
+
+                                                                    if ($1->is_constant && $3->is_constant) {
+                                                                    // constant-fold
+                                                                    $$->is_constant = true;
+                                                                    $$->data.i     = $1->data.i % $3->data.i;
+                                                                    char buf[32];
+                                                                    snprintf(buf, sizeof buf, "%d", $$->data.i);
+                                                                    $$->place      = strdup(buf);
+                                                                    } else {
+                                                                    // runtime quad
+                                                                    $$->is_constant = false;
+                                                                    $$->place       = new_temp();
+                                                                    add_quad("MOD", $1->place, $3->place, $$->place);
+                                                                    }
+
+                                                                    free_val($1);
+                                                                    free_val($3);
+                                                                }
+
+| expression POWER expression %prec POWER
+                                                                {
+                                                                    // numeric only
+                                                                    if (!(( $1->type == TYPE_INT || $1->type == TYPE_FLOAT ) &&
+                                                                        ( $3->type == TYPE_INT || $3->type == TYPE_FLOAT ))) {
+                                                                    yyerror("Power operation requires numeric operands");
+                                                                    YYERROR;
+                                                                    }
+
+                                                                    $$ = malloc(sizeof(val));
+                                                                    // determine result type
+                                                                    if ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) {
+                                                                    $$->type = TYPE_FLOAT;
+                                                                    } else {
+                                                                    $$->type = TYPE_INT;
+                                                                    }
+
+                                                                    if ($1->is_constant && $3->is_constant) {
+                                                                    // constant-fold
+                                                                    $$->is_constant = true;
+                                                                    if ($$->type == TYPE_FLOAT) {
+                                                                        float base = ($1->type == TYPE_FLOAT) ? $1->data.f : (float)$1->data.i;
+                                                                        float exp  = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
+                                                                        $$->data.f  = powf(base, exp);
+                                                                        char buf[64];
+                                                                        snprintf(buf, sizeof buf, "%f", $$->data.f);
+                                                                        $$->place   = strdup(buf);
+                                                                    } else {
+                                                                        int result = 1;
+                                                                        int base   = $1->data.i;
+                                                                        int exp    = $3->data.i;
+                                                                        for (int i = 0; i < exp; i++) result *= base;
+                                                                        $$->data.i = result;
+                                                                        char buf[32];
+                                                                        snprintf(buf, sizeof buf, "%d", $$->data.i);
+                                                                        $$->place  = strdup(buf);
+                                                                    }
+                                                                    } else {
+                                                                    // runtime quad
+                                                                    $$->is_constant = false;
+                                                                    $$->place       = new_temp();
+                                                                    add_quad("POWER", $1->place, $3->place, $$->place);
+                                                                    }
+
+                                                                    free_val($1);
+                                                                    free_val($3);
+                                                                }
+
+| '(' expression ')'  
+                                                                {
+                                                                    $$ = $2;
+                                                                }
+;
+
 function_call:
     IDENTIFIER '(' argument_list ')'                                   
                                                                 {

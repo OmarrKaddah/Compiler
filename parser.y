@@ -772,7 +772,7 @@ declaration:
                                                                     }
                                                                     printf("Declaring variable: %s\n", $2);
                                                                     printf("in scope level: %d",current_scope->scope_level);
-                                                                    add_quad("ASSIGN",$4->place,"",$2);
+                                                                    // add_quad("ASSIGN",$4->place,"",$2);
 
                                                                     last_symbol_inserted=insert_symbol(current_scope, $2, $4,SYM_VARIABLE,0,NULL);
                                                                     print_symbol_table(current_scope);

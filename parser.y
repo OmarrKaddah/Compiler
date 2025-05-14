@@ -599,11 +599,14 @@ for_statement:
                                                                     yyerror("Step value must be int");
                                                                     YYERROR;
                                                                 }
+                                                                  $5->falseLabel = new_label();  // Loop condition
+                                                                $5->endLabel   = new_label();  // Loop exit
 
                                                                 // Push loop variable if not already pushed
                                                                 if (loop_var_top + 1 < MAX_NESTED_LOOPS) {
                                                                     loop_var_top++;
-                                                                    loop_variable_stack[loop_var_top] = strdup(last_symbol_inserted->name);  // Capture variable name
+                                                                    break_label_stack[loop_var_top] = $3->endLabel;
+                                                                    continue_label_stack[loop_var_top] = $3->falseLabel;
                                                                 } else {
                                                                     yyerror("Too many nested loops");
                                                                     YYERROR;
@@ -611,8 +614,7 @@ for_statement:
 
                                                                 // Create a dummy val* to carry labels
                                                                 
-                                                                $5->falseLabel = new_label();  // Loop condition
-                                                                $5->endLabel   = new_label();  // Loop exit
+                                                              
                                                                 break_label_stack[loop_var_top] =  $5->endLabel ;
                                                                 continue_label_stack[loop_var_top] =  $5->falseLabel;
                                                                 // Emit label before evaluating condition

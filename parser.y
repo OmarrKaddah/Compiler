@@ -587,54 +587,99 @@ case_statement:
 
 declaration:
     type_specifier IDENTIFIER
-                                                              {
-                                                                if(is_symbol_in_current_scope(current_scope, $2)) {
-                                                                    yyerror("Variable already declared in this scope");
-                                                                    YYERROR;
-                                                                } else {
-                                                                    val* v = malloc(sizeof(val));
-                                                                    v->type = $1;
-                                                                    switch($1) {
-                                                                        case TYPE_INT: v->data.i = 0; break;
-                                                                        case TYPE_FLOAT: v->data.f = 0.0f; break;
-                                                                        case TYPE_STRING: v->data.s = strdup(""); break;
-                                                                        case TYPE_BOOL: v->data.b = 0; break;
+                                                                {
+                                                                    if (is_symbol_in_current_scope(current_scope, $2)) {
+                                                                        yyerror("Variable already declared in this scope");
+                                                                        YYERROR;
+                                                                    } else {
+                                                                        val* v = malloc(sizeof(val));
+                                                                        v->type = $1;
+                                                                        switch ($1) {
+                                                                            case TYPE_INT: v->data.i = 0; break;
+                                                                            case TYPE_FLOAT: v->data.f = 0.0f; break;
+                                                                            case TYPE_STRING: v->data.s = strdup(""); break;
+                                                                            case TYPE_BOOL: v->data.b = 0; break;
+                                                                        }
+                                                                        last_symbol_inserted = insert_symbol(current_scope, $2, v, SYM_VARIABLE, 0, NULL);
                                                                     }
-                                                                    
-                                                                    last_symbol_inserted=insert_symbol(current_scope, $2, v,SYM_VARIABLE,0,NULL);
                                                                 }
-                                                              }
     | type_specifier IDENTIFIER EQUAL expression
                                                                 {
-                                                                    // Type checking
+                                                                    // Type checking and conversion
                                                                     if ($1 != $4->type) {
-                                                                        yyerror("Type mismatch in initialization");
-                                                                        YYERROR;
+                                                                        if ($1 == TYPE_INT && $4->type == TYPE_FLOAT) {
+                                                                            // Convert float to int
+                                                                            char *temp = new_temp();
+                                                                            add_quad("CONV", $4->place, "", temp);
+                                                                            add_quad("ASSIGN", temp, "", $2);
+
+                                                                            // Update the symbol table with the converted value
+                                                                            $4->data.i = (int)$4->data.f;
+                                                                            $4->type = TYPE_INT;
+                                                                        } else if ($1 == TYPE_FLOAT && $4->type == TYPE_INT) {
+                                                                            // Convert int to float
+                                                                            char *temp = new_temp();
+                                                                            add_quad("CONV", $4->place, "", temp);
+                                                                            add_quad("ASSIGN", temp, "", $2);
+
+                                                                            // Update the symbol table with the converted value
+                                                                            $4->data.f = (float)$4->data.i;
+                                                                            $4->type = TYPE_FLOAT;
+                                                                        } else {
+                                                                            yyerror("Type mismatch in initialization");
+                                                                            YYERROR;
+                                                                        }
+                                                                    } else {
+                                                                        // No type conversion needed
+                                                                        add_quad("ASSIGN", $4->place, "", $2);
                                                                     }
-                                                                    
-                                                                    // Insert symbol
-                                                                    if (is_symbol_in_current_scope(current_scope, $2)) {
-                                                                        yyerror("Variable already declared");
-                                                                        YYERROR;
+
+                                                                        // Insert symbol into the symbol table
+                                                                        if (is_symbol_in_current_scope(current_scope, $2)) {
+                                                                            yyerror("Variable already declared");
+                                                                            YYERROR;
+                                                                        }
+                                                                        last_symbol_inserted = insert_symbol(current_scope, $2, $4, SYM_VARIABLE, 0, NULL);
                                                                     }
-                                                                    add_quad("ASSIGN",$4->place,"",$2);
-                                                                    last_symbol_inserted=insert_symbol(current_scope, $2, $4,SYM_VARIABLE,0,NULL);
-                                                                }
     | CONST type_specifier IDENTIFIER EQUAL expression
-                                                                {
-                                                                    if ($2 != $5->type) {
-                                                                        yyerror("Type mismatch in constant initialization");
-                                                                        YYERROR;
-                                                                    }
-                                                                    if (is_symbol_in_current_scope(current_scope, $3)) {
-                                                                        yyerror("Constant already declared");
-                                                                        YYERROR;
-                                                                    }
-                                                                    last_symbol_inserted=insert_symbol(current_scope, $3, $5, SYM_CONSTANT,0,NULL);
-                                                                }
+                                                                    {
+                                                                        // Type checking and conversion for constants
+                                                                        if ($2 != $5->type) {
+                                                                            if ($2 == TYPE_INT && $5->type == TYPE_FLOAT) {
+                                                                                // Convert float to int
+                                                                                char *temp = new_temp();
+                                                                                add_quad("CONV", $5->place, "", temp);
+                                                                                add_quad("ASSIGN", temp, "", $3);
 
+                                                                                // Update the constant value
+                                                                                $5->data.i = (int)$5->data.f;
+                                                                                $5->type = TYPE_INT;
+                                                                            } else if ($2 == TYPE_FLOAT && $5->type == TYPE_INT) {
+                                                                                // Convert int to float
+                                                                                char *temp = new_temp();
+                                                                                add_quad("CONV", $5->place, "", temp);
+                                                                                add_quad("ASSIGN", temp, "", $3);
+
+                                                                                // Update the constant value
+                                                                                $5->data.f = (float)$5->data.i;
+                                                                                $5->type = TYPE_FLOAT;
+                                                                            } else {
+                                                                                yyerror("Type mismatch in constant initialization");
+                                                                                YYERROR;
+                                                                            }
+                                                                        } else {
+                                                                            // No type conversion needed
+                                                                            add_quad("ASSIGN", $5->place, "", $3);
+                                                                        }
+
+                                                                        // Insert constant into the symbol table
+                                                                        if (is_symbol_in_current_scope(current_scope, $3)) {
+                                                                            yyerror("Constant already declared");
+                                                                            YYERROR;
+                                                                        }
+                                                                        last_symbol_inserted = insert_symbol(current_scope, $3, $5, SYM_CONSTANT, 0, NULL);
+                                                                    }
     ;
-
 type_specifier:
     T_INT    { $$ = TYPE_INT; }
   | T_FLOAT  { $$ = TYPE_FLOAT; }

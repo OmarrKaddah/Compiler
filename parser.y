@@ -520,7 +520,7 @@ while_statement:
                                                                 }
 
                                                                 add_quad("LABEL", $3->falseLabel, "", "");
-                                                                add_quad("JMP_FALSE", $3->place, "", $3->endLabel);
+                                                                add_quad("JMP_FALSE", $3->endLabel, "", $3->endLabel);
                                                             }
     block_statement
                                                             {
@@ -619,7 +619,7 @@ for_statement:
                                                                 add_quad("LABEL",  $5->falseLabel, "", "");
 
                                                                 // Check condition
-                                                                add_quad("JMP_FALSE", $5->place, "",  $5->endLabel );
+                                                                add_quad("JMP_FALSE",$5->endLabel, "",  $5->endLabel );
 
                                                                 // Optional debug
                                                                 if ($5->data.b) printf("Condition is true\n");

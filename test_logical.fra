@@ -1,0 +1,7 @@
+bool a = true;
+bool b = false;
+bool and = a && b;
+etba3(and);
+bool or = a || b;
+etba3(or);
+

@@ -1,3 +1,0 @@
-rakam x = 10;
-rakam y = 0;
-etba3(x / y); // Invalid division

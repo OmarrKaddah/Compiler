@@ -1,5 +1,10 @@
-rakam add(rakam a, rakam b) {
-    raga3 a + b;
-}
-
-etba3(add(5, 7));
+bool x;
+x = true;
+bool y;
+bool z;
+z = !x;
+y = !true;
+etba3(y);
+int r = 5;
+int not = ~r;
+int mot = ~5;

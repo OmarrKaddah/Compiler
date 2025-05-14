@@ -76,6 +76,9 @@
     char  *place; 
 }
 
+
+  
+
 /* Token declarations */
 %token <i> INT
 %token <f> FLOAT
@@ -135,6 +138,16 @@ statement:
     | print_statement';'  
     | block_statement
     | function_call_statement ';'
+    | error ';' { 
+      fprintf(stderr, "Skipping invalid statement\n");
+       yyerrok;  // Reset error state
+       yyclearin;  // Discard current token
+    }
+   | error '}' { 
+       fprintf(stderr, "Skipping to block end\n");
+       yyerrok;
+       yyclearin;
+    }
     ;
 
 function_definition:
@@ -329,44 +342,66 @@ argument_list:
   ;
 assignment_statement:
     IDENTIFIER EQUAL expression
-                                            {
-                                            // Lookup variable
-                                            Symbol* sym = lookup_symbol(current_scope, $1);
-                                            if (!sym) {
-                                                yyerror("Undefined variable");
-                                                YYERROR;
-                                            }
-                                            
-                                            // Check if constant
-                                            if (sym->sym_type == SYM_CONSTANT) {
-                                                yyerror("Cannot assign to constant");
-                                                YYERROR;
-                                            }
-                                            
-                                            // Type checking
-                                            if (sym->value->type != $3->type) {
-                                                yyerror("Type mismatch in assignment");
-                                                YYERROR;
-                                            }
-                                            
-                                            // Update value
-                                            switch(sym->value->type) {
-                                                case TYPE_INT: sym->value->data.i = $3->data.i; break;
-                                                case TYPE_FLOAT: sym->value->data.f = $3->data.f; break;
-                                                case TYPE_STRING: 
-                                                    free(sym->value->data.s);
-                                                    sym->value->data.s = strdup($3->data.s);
-                                                    break;
-                                                case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
-                                            }
+                                                                        {
+                                                                           
+                                                                            Symbol* sym = lookup_symbol(current_scope, $1);
+                                                                            if (!sym) {
+                                                                                yyerror("Undefined variable");
+                                                                                YYERROR;
+                                                                            }
+
+                                                                           
+                                                                            if (sym->sym_type == SYM_CONSTANT) {
+                                                                                yyerror("Cannot assign to a constant");
+                                                                                YYERROR;
+                                                                            }
+
+                                                                            if (sym->value->type != $3->type) {
+                                                                                if (sym->value->type == TYPE_INT && $3->type == TYPE_FLOAT) {
+                                                                                   
+                                                                                    char *temp = new_temp();
+                                                                                    add_quad("CONV", $3->place, "", temp);
+                                                                                    add_quad("ASSIGN", temp, "", $1);
+
+                                                                                    sym->value->data.i = (int)$3->data.f;
+                                                                                    sym->value->type = TYPE_INT; 
+                                                                                } else if (sym->value->type == TYPE_FLOAT && $3->type == TYPE_INT) {
+                                                                                 
+                                                                                    char *temp = new_temp();
+                                                                                    add_quad("CONV", $3->place, "", temp);
+                                                                                    add_quad("ASSIGN", temp, "", $1);
+
+                                                                                 
+                                                                                    sym->value->data.f = (float)$3->data.i;
+                                                                                    sym->value->type = TYPE_FLOAT; 
+                                                                                } else {
+                                                                                  
+                                                                                    yyerror("Type mismatch in assignment");
+                                                                                    YYERROR;
+                                                                                }
+                                                                            } else {
+                                                                               
+                                                                                add_quad("ASSIGN", $3->place, "", $1);
+
+                                                                             
+                                                                                switch (sym->value->type) {
+                                                                                    case TYPE_INT: sym->value->data.i = $3->data.i; break;
+                                                                                    case TYPE_FLOAT: sym->value->data.f = $3->data.f; break;
+                                                                                    case TYPE_STRING:
+                                                                                        free(sym->value->data.s);
+                                                                                        sym->value->data.s = strdup($3->data.s);
+                                                                                        break;
+                                                                                    case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
+                                                                                }
                                             if (loop_var_top + 1 < MAX_NESTED_LOOPS && loop_variable_stack[loop_var_top] == NULL) {
                                                 loop_var_top++;
                                                 loop_variable_stack[loop_var_top] = strdup($1);  // push variable name
                                             }
 
-                                            add_quad("ASSIGN",$3->place,"",$1);
-                                            free_val($3);
-                                        }
+                                                                            }
+
+                                                                            free_val($3); 
+                                                                        }
     ;
 
 block_statement:
@@ -701,10 +736,33 @@ declaration:
                                                               }
     | type_specifier IDENTIFIER EQUAL expression
                                                                 {
-                                                                    // Type checking
+                                                                    // Type checking and conversion
                                                                     if ($1 != $4->type) {
-                                                                        yyerror("Type mismatch in initialization");
-                                                                        YYERROR;
+                                                                        if ($1 == TYPE_INT && $4->type == TYPE_FLOAT) {
+                                                                            // Convert float to int
+                                                                            char *temp = new_temp();
+                                                                            add_quad("CONV", $4->place, "", temp);
+                                                                            add_quad("ASSIGN", temp, "", $2);
+
+                                                                            // Update the symbol table with the converted value
+                                                                            $4->data.i = (int)$4->data.f;
+                                                                            $4->type = TYPE_INT;
+                                                                        } else if ($1 == TYPE_FLOAT && $4->type == TYPE_INT) {
+                                                                            // Convert int to float
+                                                                            char *temp = new_temp();
+                                                                            add_quad("CONV", $4->place, "", temp);
+                                                                            add_quad("ASSIGN", temp, "", $2);
+
+                                                                            // Update the symbol table with the converted value
+                                                                            $4->data.f = (float)$4->data.i;
+                                                                            $4->type = TYPE_FLOAT;
+                                                                        } else {
+                                                                            yyerror("Type mismatch in initialization");
+                                                                            YYERROR;
+                                                                        }
+                                                                    } else {
+                                                                        // No type conversion needed
+                                                                        add_quad("ASSIGN", $4->place, "", $2);
                                                                     }
                                                                     
                                                                     // Insert symbol
@@ -720,20 +778,44 @@ declaration:
                                                                     print_symbol_table(current_scope);
                                                                 }
     | CONST type_specifier IDENTIFIER EQUAL expression
-                                                                {
-                                                                    if ($2 != $5->type) {
-                                                                        yyerror("Type mismatch in constant initialization");
-                                                                        YYERROR;
-                                                                    }
-                                                                    if (is_symbol_in_current_scope(current_scope, $3)) {
-                                                                        yyerror("Constant already declared");
-                                                                        YYERROR;
-                                                                    }
-                                                                    last_symbol_inserted=insert_symbol(current_scope, $3, $5, SYM_CONSTANT,0,NULL);
-                                                                }
+                                                                    {
+                                                                        // Type checking and conversion for constants
+                                                                        if ($2 != $5->type) {
+                                                                            if ($2 == TYPE_INT && $5->type == TYPE_FLOAT) {
+                                                                                // Convert float to int
+                                                                                char *temp = new_temp();
+                                                                                add_quad("CONV", $5->place, "", temp);
+                                                                                add_quad("ASSIGN", temp, "", $3);
 
+                                                                                // Update the constant value
+                                                                                $5->data.i = (int)$5->data.f;
+                                                                                $5->type = TYPE_INT;
+                                                                            } else if ($2 == TYPE_FLOAT && $5->type == TYPE_INT) {
+                                                                                // Convert int to float
+                                                                                char *temp = new_temp();
+                                                                                add_quad("CONV", $5->place, "", temp);
+                                                                                add_quad("ASSIGN", temp, "", $3);
+
+                                                                                // Update the constant value
+                                                                                $5->data.f = (float)$5->data.i;
+                                                                                $5->type = TYPE_FLOAT;
+                                                                            } else {
+                                                                                yyerror("Type mismatch in constant initialization");
+                                                                                YYERROR;
+                                                                            }
+                                                                        } else {
+                                                                            // No type conversion needed
+                                                                            add_quad("ASSIGN", $5->place, "", $3);
+                                                                        }
+
+                                                                        // Insert constant into the symbol table
+                                                                        if (is_symbol_in_current_scope(current_scope, $3)) {
+                                                                            yyerror("Constant already declared");
+                                                                            YYERROR;
+                                                                        }
+                                                                        last_symbol_inserted = insert_symbol(current_scope, $3, $5, SYM_CONSTANT, 0, NULL);
+                                                                    }
     ;
-
 type_specifier:
     T_INT    { $$ = TYPE_INT; }
   | T_FLOAT  { $$ = TYPE_FLOAT; }
@@ -1087,6 +1169,7 @@ expression:
                                                                                 add_quad("OR", $1->place, $3->place, $$->place);
                                                                             }
                                                                         }
+    
     | expression LESS expression %prec LESS
                                                                         {
                                                                             if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
@@ -1207,35 +1290,33 @@ expression:
                                                                         }
     | NOT expression %prec NOT
                                                                         {
-                                                                            if ($2->type != TYPE_BOOL) {
-                                                                                yyerror("Logical NOT requires boolean operand");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                $$->data.b = 0;
-                                                                            } else {
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_BOOL;
-                                                                                $$->data.b = !$2->data.b;
-                                                                                $$->place =new_temp();
+                                                                             if ($2->type != TYPE_BOOL) {
+                                                                            yyerror("Logical NOT requires boolean operand");
+                                                                            YYERROR;
+                                                                        } else {
+                                                                            $$ = malloc(sizeof(val));
+                                                                            $$->type = TYPE_BOOL;
+                                                                            $$->data.b = !$2->data.b; // Perform logical NOT
+                                                                            $$->place = new_temp();   // Create a temporary for the result
+                                                                            add_quad("NOT", $2->place, "", $$->place); // Generate quadruple
+                                                                        }
 
-                                                                                add_quad("NOT", $2->place, NULL, $$->place);
-
-                                                                            }
+    free_val($2); // Free the operand
                                                                         }
     | BIT_NOT expression %prec BIT_NOT
                                                                         {
-                                                                            if ($2->type != TYPE_INT) {
+                                                                                if ($2->type != TYPE_INT) {
                                                                                 yyerror("Bitwise NOT requires integer operand");
-                                                                                $$ = malloc(sizeof(val));
-                                                                                $$->type = TYPE_INT;
-                                                                                $$->data.i = 0;
+                                                                                YYERROR;
                                                                             } else {
                                                                                 $$ = malloc(sizeof(val));
                                                                                 $$->type = TYPE_INT;
-                                                                                $$->data.i = ~$2->data.i;
-                                                                                $$->place=new_temp();
-                                                                                add_quad("BIT_NOT", $2->place, NULL, $$->place);
+                                                                                $$->data.i = ~$2->data.i; // Perform bitwise NOT
+                                                                                $$->place = new_temp();   // Create a temporary for the result
+                                                                                add_quad("BIT_NOT", $2->place, "", $$->place); // Generate quadruple
                                                                             }
+
+                                                                            free_val($2); // Free the operand
                                                                         }
     | INCR expression %prec INCR
                                                                         {
@@ -1472,9 +1553,11 @@ atomic:
                                                                             }
                                                                             else if ($$->type == TYPE_BOOL) {
                                                                                 $$->data.b = sym->value->data.b;
-                                                                            } else if ($$->type == TYPE_INT) {
+                                                                            }
+                                                                            else if ($$->type == TYPE_INT) {
                                                                                 $$->data.i = sym->value->data.i;
-                                                                            } else if ($$->type == TYPE_FLOAT) {
+                                                                            }
+                                                                            else if ($$->type == TYPE_FLOAT) {
                                                                                 $$->data.f = sym->value->data.f;
                                                                             }
                                                                             $$->place = strdup($1);
@@ -1489,16 +1572,23 @@ atomic:
 /* track line numbers in your lexer (lexer.l):
      \n   { ++yylineno; return '\n'; }
 */
-
+static int error_count = 0;
 void syntaxError(int line, const char *msg, const char *token) {
     fprintf(stderr,
             "Syntax error at line %d: %s near '%s'\n",
             line, msg, token);
-    exit(EXIT_FAILURE);
+   if(++error_count > 10) {
+        fprintf(stderr, "Too many errors, aborting\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void semanticError(int line, const char *msg) {
     fprintf(stderr, "Semantic error at line %d: %s\n", line, msg);
+    if(++error_count > 10) {
+        fprintf(stderr, "Too many errors, aborting\n");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void yyerror(const char* msg) {

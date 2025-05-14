@@ -1,6 +1,0 @@
-rakam a = 5; // 0101 in binary
-rakam b = 3; // 0011 in binary
-etba3(a & b); // 0001
-etba3(a | b); // 0111
-etba3(a ^ b); // 0110
-etba3(~a);    // Bitwise NOT

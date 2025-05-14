@@ -1,0 +1,7 @@
+{
+    rakam x = 10;
+    {
+        rakam x = 20;
+    }
+    etba3(x);
+}

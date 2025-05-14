@@ -1,1 +1,7 @@
-rakam x=3+5+2;
+rakam x=5;
+le7ad(x=0;x<3;khatwa=1){
+    le7ad(x=0;x<3;khatwa=1){
+        kamel;
+    }
+    kamel;
+}

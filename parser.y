@@ -7,10 +7,14 @@
     #include "quadruples.h"
 
 
-
     #define MAX_NESTED_LOOPS 16
     char* loop_variable_stack[MAX_NESTED_LOOPS];
-    int loop_var_top = -1;
+    int loop_variable_top = -1;   // ONLY for for-loop variables
+
+    char* break_label_stack[MAX_NESTED_LOOPS];
+    char* continue_label_stack[MAX_NESTED_LOOPS];
+    int loop_control_top = -1;    // for ALL loop types
+
     char* current_switch_place   = NULL;  // the “scrutinee” variable/place
     char* current_switch_endLabel = NULL; // label to jump to after the switch
     char * do_while_label = NULL;
@@ -19,8 +23,7 @@
     char *cmpTemp   = NULL;
     char *caseLabel = NULL;
     char *skipLabel = NULL;
-    char* break_label_stack[MAX_NESTED_LOOPS];
-    char* continue_label_stack[MAX_NESTED_LOOPS];
+  
 
 
 
@@ -360,9 +363,9 @@ assignment_statement:
                                                     break;
                                                 case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
                                             }
-                                            if (loop_var_top + 1 < MAX_NESTED_LOOPS && loop_variable_stack[loop_var_top] == NULL) {
-                                                loop_var_top++;
-                                                loop_variable_stack[loop_var_top] = strdup($1);  // push variable name
+                                            if (loop_variable_top + 1 < MAX_NESTED_LOOPS && loop_variable_stack[loop_variable_top] == NULL) {
+                                                loop_variable_top++;
+                                                loop_variable_stack[loop_variable_top] = strdup($1);  // push variable name
                                             }
 
                                             add_quad("ASSIGN",$3->place,"",$1);
@@ -474,11 +477,12 @@ while_statement:
                                                                 $3->endLabel   = new_label();  // Loop exit
 
                                                                 // Push break/continue labels (no loop var needed)
-                                                                if (loop_var_top + 1 < MAX_NESTED_LOOPS) {
-                                                                    loop_var_top++;
-                                                                    break_label_stack[loop_var_top] = $3->endLabel;
-                                                                    continue_label_stack[loop_var_top] = $3->falseLabel;
-                                                                } else {
+                                                               if (loop_control_top + 1 < MAX_NESTED_LOOPS) {
+                                                                    loop_control_top++;
+                                                                    break_label_stack[loop_control_top] = end_label;
+                                                                    continue_label_stack[loop_control_top] = start_label;
+                                                                }
+                                                                else {
                                                                     yyerror("Too many nested loops");
                                                                     YYERROR;
                                                                 }
@@ -491,9 +495,10 @@ while_statement:
                                                                 add_quad("JMP", "", "", $3->falseLabel);
                                                                 add_quad("LABEL", $3->endLabel, "", "");
 
-                                                                break_label_stack[loop_var_top] = NULL;
-                                                                continue_label_stack[loop_var_top] = NULL;
-                                                                loop_var_top--;
+                                                                break_label_stack[loop_control_top] = NULL;
+                                                                continue_label_stack[loop_control_top] = NULL;
+                                                                loop_control_top--;
+
 
                                                                 free_val($3);
                                                             }
@@ -505,7 +510,7 @@ while_statement:
 do_while_statement:
     DO
                                                             {
-                                                                if (loop_var_top + 1 >= MAX_NESTED_LOOPS) {
+                                                                if (loop_variable_top + 1 >= MAX_NESTED_LOOPS) {
                                                                     yyerror("Too many nested loops");
                                                                     YYERROR;
                                                                 }
@@ -514,9 +519,10 @@ do_while_statement:
                                                                 do_while_label = new_label();
 
                                                                 // Push break/continue labels for this loop
-                                                                loop_var_top++;
-                                                                break_label_stack[loop_var_top] = new_label();           // Exit after loop
-                                                                continue_label_stack[loop_var_top] = do_while_label;     // Start of loop condition check
+                                                                loop_control_top++;
+                                                                break_label_stack[loop_control_top] = new_label();
+                                                                continue_label_stack[loop_control_top] = do_while_label;
+
 
                                                                 // Emit start label
                                                                 add_quad("LABEL", do_while_label, "", "");
@@ -539,13 +545,14 @@ do_while_statement:
                                                                 add_quad("JMP_TRUE", $6->place, "", do_while_label);
 
                                                                 // Emit loop exit label
-                                                                add_quad("LABEL", break_label_stack[loop_var_top], "", "");
+                                                                add_quad("LABEL", break_label_stack[loop_variable_top], "", "");
 
                                                                 // Cleanup
                                                                 free_val($6);
-                                                                break_label_stack[loop_var_top] = NULL;
-                                                                continue_label_stack[loop_var_top] = NULL;
-                                                                loop_var_top--;
+                                                                break_label_stack[loop_control_top] = NULL;
+                                                                continue_label_stack[loop_control_top] = NULL;
+                                                                loop_control_top--;
+
                                                             }
 ;
 
@@ -564,21 +571,20 @@ for_statement:
                                                                     YYERROR;
                                                                 }
 
-                                                                // Push loop variable if not already pushed
-                                                                if (loop_var_top + 1 < MAX_NESTED_LOOPS) {
-                                                                    loop_var_top++;
-                                                                    loop_variable_stack[loop_var_top] = strdup(last_symbol_inserted->name);  // Capture variable name
-                                                                } else {
-                                                                    yyerror("Too many nested loops");
-                                                                    YYERROR;
+                                                                if (loop_variable_top + 1 < MAX_NESTED_LOOPS) {
+                                                                    loop_variable_top++;
+                                                                    loop_variable_stack[loop_variable_top] = strdup(last_symbol_inserted->name);
                                                                 }
+
 
                                                                 // Create a dummy val* to carry labels
                                                                 
                                                                 for_loop_false_label = new_label(); // condition label
                                                                 for_loop_end_label = new_label();   // loop exit
-                                                                break_label_stack[loop_var_top] = for_loop_end_label;
-                                                                continue_label_stack[loop_var_top] = for_loop_false_label;
+                                                                loop_control_top++;
+                                                                break_label_stack[loop_control_top] = for_loop_end_label;
+                                                                continue_label_stack[loop_control_top] = for_loop_false_label;
+
                                                                 // Emit label before evaluating condition
                                                                 add_quad("LABEL", for_loop_false_label, "", "");
 
@@ -591,7 +597,7 @@ for_statement:
                                                             }
     block_statement
                                                             {
-                                                                char *loopVar = loop_variable_stack[loop_var_top];  // Use top of the loop variable stack
+                                                                char *loopVar = loop_variable_stack[loop_variable_top];  // Use top of the loop variable stack
 
                                                                 char *stepTemp = new_temp();
                                                                 add_quad("ADD", loopVar, $9->place, stepTemp);       // stepTemp = loopVar + step
@@ -607,12 +613,14 @@ for_statement:
                                                                 free_val($9);
                                                                 
 
-                                                                free(loop_variable_stack[loop_var_top]);
-                                                                loop_variable_stack[loop_var_top] = NULL;
-                                                                break_label_stack[loop_var_top] = NULL;
-                                                                continue_label_stack[loop_var_top] = NULL;
-            
-                                                                loop_var_top--;
+                                                                free(loop_variable_stack[loop_variable_top]);
+                                                                loop_variable_stack[loop_variable_top] = NULL;
+                                                                loop_variable_top--;
+
+                                                                break_label_stack[loop_control_top] = NULL;
+                                                                continue_label_stack[loop_control_top] = NULL;
+                                                                loop_control_top--;
+
                                                             }
     
     ;
@@ -782,22 +790,24 @@ return_statement:
 break_statement:
 BREAK
     {
-        if (loop_var_top < 0 || break_label_stack[loop_var_top] == NULL) {
+        if (loop_control_top < 0 || break_label_stack[loop_control_top] == NULL)
+ {
             yyerror("Break used outside loop");
             YYERROR;
         }
-        add_quad("JMP", "", "", break_label_stack[loop_var_top]);
+        add_quad("JMP", "", "", break_label_stack[loop_variable_top]);
     }
     ;
 
 continue_statement:
     CONTINUE
     {
-        if (loop_var_top < 0 || continue_label_stack[loop_var_top] == NULL) {
+        if (loop_control_top < 0 || break_label_stack[loop_control_top] == NULL)
+ {
             yyerror("Continue used outside loop");
             YYERROR;
         }
-        add_quad("JMP", "", "", continue_label_stack[loop_var_top]);
+        add_quad("JMP", "", "", continue_label_stack[loop_variable_top]);
     }
 ;
 

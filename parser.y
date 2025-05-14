@@ -611,15 +611,15 @@ for_statement:
 
                                                                 // Create a dummy val* to carry labels
                                                                 
-                                                                for_loop_false_label = new_label(); // condition label
-                                                                for_loop_end_label = new_label();   // loop exit
-                                                                break_label_stack[loop_var_top] = for_loop_end_label;
-                                                                continue_label_stack[loop_var_top] = for_loop_false_label;
+                                                                $3->falseLabel = new_label();  // Loop condition
+                                                                $3->endLabel   = new_label();  // Loop exit
+                                                                break_label_stack[loop_var_top] =  $3->endLabel ;
+                                                                continue_label_stack[loop_var_top] =  $3->falseLabel
                                                                 // Emit label before evaluating condition
-                                                                add_quad("LABEL", for_loop_false_label, "", "");
+                                                                add_quad("LABEL",  $3->falseLabel, "", "");
 
                                                                 // Check condition
-                                                                add_quad("JMP_FALSE", $5->place, "", for_loop_end_label);
+                                                                add_quad("JMP_FALSE", $5->place, "",  $3->endLabel );
 
                                                                 // Optional debug
                                                                 if ($5->data.b) printf("Condition is true\n");
@@ -633,8 +633,8 @@ for_statement:
                                                                 //add_quad("ADD", loopVar, $9->place, stepTemp);       // stepTemp = loopVar + step
                                                                 //add_quad("ASSIGN", stepTemp, "", loopVar);           // loopVar = stepTemp
 
-                                                                add_quad("JMP", "", "", for_loop_false_label);          // Go back to condition
-                                                                add_quad("LABEL", for_loop_end_label, "", "");          // End of loop
+                                                                add_quad("JMP", "", "",  $3->falseLabel);          // Go back to condition
+                                                                add_quad("LABEL",  $3->endLabel , "", "");          // End of loop
                                                                 // Emit loop exit label
                                                                 // End of loop
                                                                

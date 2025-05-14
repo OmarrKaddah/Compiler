@@ -13,6 +13,9 @@
     int loop_var_top = -1;
     char* current_switch_place   = NULL;  // the “scrutinee” variable/place
     char* current_switch_endLabel = NULL; // label to jump to after the switch
+    char * do_while_label = NULL;
+    char * for_loop_end_label = NULL;
+    char * for_loop_false_label = NULL;
 
 
 
@@ -496,9 +499,9 @@ while_statement:
 do_while_statement:
     DO
                                                             {
-                                                                $$ = create_default_value(TYPE_BOOL);
-                                                                $$->falseLabel = new_label();
-                                                                add_quad("LABEL", $$->falseLabel, "", "");
+                                                                
+                                                                do_while_label = new_label();
+                                                                add_quad("LABEL", do_while_label, "", "");
                                                             }
     block_statement
     WHILE '(' expression ')'
@@ -511,9 +514,9 @@ do_while_statement:
                                                                     printf("Condition is true\n");
                                                                 else
                                                                     printf("Condition is false\n");
-                                                                add_quad("JMP_TRUE", $6->place, "", $2->falseLabel);
+                                                                add_quad("JMP_TRUE", $6->place, "", do_while_label);
                                                                 free_val($6);
-                                                                free_val($2);
+                                                                
                                                             }
 ;
 
@@ -541,15 +544,15 @@ for_statement:
                                                                 }
 
                                                                 // Create a dummy val* to carry labels
-                                                                $$ = create_default_value(TYPE_BOOL);
-                                                                $$->falseLabel = new_label(); // condition label
-                                                                $$->endLabel = new_label();   // loop exit
+                                                                
+                                                                for_loop_false_label = new_label(); // condition label
+                                                                for_loop_end_label = new_label();   // loop exit
 
                                                                 // Emit label before evaluating condition
-                                                                add_quad("LABEL", $$->falseLabel, "", "");
+                                                                add_quad("LABEL", for_loop_false_label, "", "");
 
                                                                 // Check condition
-                                                                add_quad("JMP_FALSE", $5->place, "", $$->endLabel);
+                                                                add_quad("JMP_FALSE", $5->place, "", for_loop_end_label);
 
                                                                 // Optional debug
                                                                 if ($5->data.b) printf("Condition is true\n");
@@ -563,13 +566,13 @@ for_statement:
                                                                 add_quad("ADD", loopVar, $9->place, stepTemp);       // stepTemp = loopVar + step
                                                                 add_quad("ASSIGN", stepTemp, "", loopVar);           // loopVar = stepTemp
 
-                                                                add_quad("JMP", "", "", $$->falseLabel);          // Go back to condition
-                                                                add_quad("LABEL", $$->endLabel, "", "");          // End of loop
+                                                                add_quad("JMP", "", "", for_loop_false_label);          // Go back to condition
+                                                                add_quad("LABEL", for_loop_end_label, "", "");          // End of loop
 
                                                                 // Cleanup
                                                                 free_val($5);
                                                                 free_val($9);
-                                                                free_val($2);
+                                                                
 
                                                                 free(loop_variable_stack[loop_var_top]);
                                                                 loop_variable_stack[loop_var_top] = NULL;
@@ -772,7 +775,7 @@ print_statement:
                                                                               default:
                                                                                   yyerror("Unknown type in print statement");
                                                                           }
-                                                                            add_quad("CALL",$1,"",""); // Call the print function
+                                                                            add_quad("CALL","print","",""); // Call the print function
                                                                           // Free the allocated val structure
                                                                           free($3);
                                                                       }
@@ -1413,6 +1416,13 @@ atomic:
                                                                             memcpy($$, sym->value, sizeof(val));
                                                                             if ($$->type == TYPE_STRING) {
                                                                                 $$->data.s = strdup(sym->value->data.s);
+                                                                            }
+                                                                            else if ($$->type == TYPE_BOOL) {
+                                                                                $$->data.b = sym->value->data.b;
+                                                                            } else if ($$->type == TYPE_INT) {
+                                                                                $$->data.i = sym->value->data.i;
+                                                                            } else if ($$->type == TYPE_FLOAT) {
+                                                                                $$->data.f = sym->value->data.f;
                                                                             }
                                                                             $$->place = strdup($1);
                                                                             $$->is_constant = false;

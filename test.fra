@@ -1,11 +1,11 @@
-rakam x=2+3;
 
-rakam h=7+10;
-rakam b=x+h;
-rakam easy(rakam f){
+kasr p=3.5;
 
+law (2>3){
+
+etba3(5);
+
+    
+}aw{
+    etba3(8);
 }
-
-kalam kelma="hello";
-
-easy(5);

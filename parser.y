@@ -1081,7 +1081,7 @@ expression:
                                                                                 float right = ($3->type == TYPE_FLOAT) ? $3->data.f : (float)$3->data.i;
                                                                                 $$->data.b = (left > right);
                                                                                 $$->place=new_temp();
-                                                                                add_quad("GREATER_THAN", $1->place, $3->place, $$->place);
+                                                                                add_quad("GREATER", $1->place, $3->place, $$->place);
                                                                             } else {
                                                                                 yyerror("Comparison operator '>' requires numeric operands");
                                                                                 $$ = malloc(sizeof(val));

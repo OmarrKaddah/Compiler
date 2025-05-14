@@ -465,40 +465,53 @@ if_statement:
 
 while_statement:
     WHILE '(' expression ')' 
-                                                            {
-                                                                if ($3->type != TYPE_BOOL) {
-                                                                    yyerror("Condition in while statement must be boolean");
-                                                                    YYERROR;
-                                                                }
+    {
+        /* --- Type check --- */
+        if ($3->type != TYPE_BOOL) {
+            yyerror("Condition in while statement must be boolean");
+            YYERROR;
+        }
 
-                                                                $3->falseLabel = new_label();  // Loop condition
-                                                                $3->endLabel   = new_label();  // Loop exit
+        /* CHANGED: reserve two fresh labels */
+        char *while_begin = new_label();
+        char *while_exit  = new_label();
 
-                                                                // Push break/continue labels (no loop var needed)
-                                                                if (loop_var_top + 1 < MAX_NESTED_LOOPS) {
-                                                                    loop_var_top++;
-                                                                    break_label_stack[loop_var_top] = $3->endLabel;
-                                                                    continue_label_stack[loop_var_top] = $3->falseLabel;
-                                                                } else {
-                                                                    yyerror("Too many nested loops");
-                                                                    YYERROR;
-                                                                }
+        /* CHANGED: push them onto the stacks */
+        if (loop_var_top + 1 < MAX_NESTED_LOOPS) {
+            loop_var_top++;
+            break_label_stack[loop_var_top]    = while_exit;
+            continue_label_stack[loop_var_top] = while_begin;
+        } else {
+            yyerror("Too many nested loops");
+            YYERROR;
+        }
 
-                                                                add_quad("LABEL", $3->falseLabel, "", "");
-                                                                add_quad("JMP_FALSE", $3->place, "", $3->endLabel);
-                                                            }
+        /* CHANGED: emit the loop‐start label */
+        add_quad("LABEL", while_begin, "", "");
+
+        /* CHANGED: branch on the boolean condition */
+        add_quad("JMP_FALSE", $3->place, "", while_exit);
+
+        /* clean up the expression node */
+        free_val($3);
+    }
     block_statement
-                                                            {
-                                                                add_quad("JMP", "", "", $3->falseLabel);
-                                                                add_quad("LABEL", $3->endLabel, "", "");
+    {
+        /* CHANGED: after the body, jump back to the test */
+        add_quad("JMP", "", "", while_begin);
 
-                                                                break_label_stack[loop_var_top] = NULL;
-                                                                continue_label_stack[loop_var_top] = NULL;
-                                                                loop_var_top--;
+        /* CHANGED: emit the loop‐exit label */
+        add_quad("LABEL", while_exit, "", "");
 
-                                                                free_val($3);
-                                                            }
+        /* CHANGED: pop the labels off */
+        free(break_label_stack[loop_var_top]);
+        free(continue_label_stack[loop_var_top]);
+        break_label_stack[loop_var_top]    = NULL;
+        continue_label_stack[loop_var_top] = NULL;
+        loop_var_top--;
+    }
 ;
+
 
 
 

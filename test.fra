@@ -6,3 +6,5 @@ rakam easy(rakam g,rakam h){
 }
 rakam l=4;
 rakam f=easy(5,l);
+
+bool sah=l==4;

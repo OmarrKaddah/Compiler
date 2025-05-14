@@ -464,52 +464,49 @@ if_statement:
 
 
 while_statement:
-    WHILE '(' expression ')' 
-    {
-        /* --- Type check --- */
-        if ($3->type != TYPE_BOOL) {
-            yyerror("Condition in while statement must be boolean");
-            YYERROR;
-        }
-
-        /* CHANGED: reserve two fresh labels */
-        char *while_begin = new_label();
-        char *while_exit  = new_label();
-
-        /* CHANGED: push them onto the stacks */
-        if (loop_var_top + 1 < MAX_NESTED_LOOPS) {
-            loop_var_top++;
-            break_label_stack[loop_var_top]    = while_exit;
-            continue_label_stack[loop_var_top] = while_begin;
-        } else {
-            yyerror("Too many nested loops");
-            YYERROR;
-        }
-
-        /* CHANGED: emit the loop‐start label */
-        add_quad("LABEL", while_begin, "", "");
-
-        /* CHANGED: branch on the boolean condition */
-        add_quad("JMP_FALSE", $3->place, "", while_exit);
-
-        /* clean up the expression node */
-        free_val($3);
+  WHILE '(' expression ')'
+  {
+    /* Type check */
+    if ($3->type != TYPE_BOOL) {
+      yyerror("Condition in while must be boolean");
+      YYERROR;
     }
-    block_statement
-    {
-        /* CHANGED: after the body, jump back to the test */
-        add_quad("JMP", "", "", while_begin);
 
-        /* CHANGED: emit the loop‐exit label */
-        add_quad("LABEL", while_exit, "", "");
+    /* 1) allocate two fresh labels */
+    char *lbl_begin = new_label();
+    char *lbl_exit  = new_label();
 
-        /* CHANGED: pop the labels off */
-        free(break_label_stack[loop_var_top]);
-        free(continue_label_stack[loop_var_top]);
-        break_label_stack[loop_var_top]    = NULL;
-        continue_label_stack[loop_var_top] = NULL;
-        loop_var_top--;
+    /* 2) push them onto the stacks */
+    if (loop_label_top + 1 < MAX_NESTED_LOOPS) {
+      loop_label_top++;
+      continue_label_stack[loop_label_top] = lbl_begin;
+      break_label_stack[loop_label_top]    = lbl_exit;
+    } else {
+      yyerror("Too many nested loops");
+      YYERROR;
     }
+
+    /* 3) emit the loop-start label and test */
+    add_quad("LABEL", lbl_begin, "", "");
+    add_quad("JMP_FALSE", $3->place, "", lbl_exit);
+
+    free_val($3);
+  }
+  block_statement
+  {
+    /* 4) after the body, jump back to the test (i.e. “continue”) */
+    add_quad("JMP", "", "", continue_label_stack[loop_label_top]);
+
+    /* 5) emit the loop-exit label (i.e. “break”) */
+    add_quad("LABEL", break_label_stack[loop_label_top], "", "");
+
+    /* 6) pop and free */
+    free(continue_label_stack[loop_label_top]);
+    free(break_label_stack[loop_label_top]);
+    continue_label_stack[loop_label_top] =
+    break_label_stack[loop_label_top]    = NULL;
+    loop_label_top--;
+  }
 ;
 
 
@@ -567,61 +564,50 @@ do_while_statement:
 
 
 for_statement:
-    FOR '(' assignment_statement ';' expression ';' STEP EQUAL atomic ')'
-                                                            {
-                                                                if ($5->type != TYPE_BOOL) {
-                                                                    yyerror("Condition in for statement must be boolean");
-                                                                    YYERROR;
-                                                                }
-                                                                if ($9->type != TYPE_INT) {
-                                                                    yyerror("Step value must be int");
-                                                                    YYERROR;
-                                                                }
+  FOR '(' assignment_statement ';' expression ';' STEP '=' atomic ')'
+  {
+    /* 1) allocate three fresh labels */
+    char *lb = new_label();
+    char *lc = new_label();
+    char *le = new_label();
 
-                                                                /* CHANGED: reserve three fresh labels */
-                                                                char *for_begin_lbl   = new_label();
-                                                                char *for_continue_lbl= new_label();
-                                                                char *for_exit_lbl    = new_label();
+    /* 2) push them */
+    loop_label_top++;
+    begin_label_stack  [loop_label_top] = lb;
+    continue_label_stack[loop_label_top] = lc;
+    break_label_stack  [loop_label_top] = le;
 
-                                                                /* CHANGED: push them onto the stacks */
-                                                                if (loop_var_top+1 >= MAX_NESTED_LOOPS) {
-                                                                    yyerror("Too many nested loops");
-                                                                    YYERROR;
-                                                                }
-                                                                loop_var_top++;
-                                                                loop_variable_stack[loop_var_top]       = strdup(last_symbol_inserted->name);
-                                                                break_label_stack[loop_var_top]        = for_exit_lbl;        /* CHANGED */
-                                                                continue_label_stack[loop_var_top]     = for_continue_lbl;    /* CHANGED */
+    /* 3) emit the “begin” anchor and initial jump test */
+    add_quad("LABEL", lb, "", "");
+    add_quad("JMP_FALSE", $5->place, "", le);
 
-                                                                /* CHANGED: emit the loop‐start label before the body */
-                                                                add_quad("LABEL", for_begin_lbl, "", "");
+    free_val($5);
+  }
+  block_statement
+  {
+    /* 4) at end of body, emit the “continue” anchor */
+    add_quad("LABEL", continue_label_stack[loop_label_top], "", "");
 
-                                                                /* Save the parsed pieces to temporaries */
-                                                                /* (you already have code here to copy $3, $5, etc. into temps) */
+    /* 5) perform your step update (whatever that is) */
 
-                                                                /* Your existing code will now emit the body quads... */
-                                                            }
-    block_statement
-                                                {
-                                                    /* CHANGED: after the body, emit the continue target */
-                                                    add_quad("LABEL", for_continue_lbl, "", "");  
-                                                    /* CHANGED: evaluate and perform the step (you probably already do this) */
-                                                    /* e.g. add_quad("ADD", loop_variable_stack[loop_var_top], stepTemp, loop_variable_stack[loop_var_top]); */
-                                                    /* CHANGED: test condition and loop back */
-                                                    add_quad("IF_TRUE", cmpTemp, "", for_begin_lbl);
-                                                    /* CHANGED: emit the loop‐exit label */
-                                                    add_quad("LABEL", for_exit_lbl, "", "");
+    /* 6) re-test and loop back */
+    add_quad("JMP_TRUE", /* your loop-condition temp */, "",
+             begin_label_stack[loop_label_top]);
 
-                                                    /* CHANGED: clean up the stacks */
-                                                    free(loop_variable_stack[loop_var_top]);
-                                                    loop_variable_stack[loop_var_top]   = NULL;
-                                                    free(break_label_stack[loop_var_top]);
-                                                    free(continue_label_stack[loop_var_top]);
-                                                    break_label_stack[loop_var_top]     = NULL;
-                                                    continue_label_stack[loop_var_top]  = NULL;
-                                                    loop_var_top--;
-                                                }
+    /* 7) emit the loop-exit anchor */
+    add_quad("LABEL", break_label_stack[loop_label_top], "", "");
+
+    /* 8) pop and free */
+    free(begin_label_stack  [loop_label_top]);
+    free(continue_label_stack[loop_label_top]);
+    free(break_label_stack  [loop_label_top]);
+    begin_label_stack  [loop_label_top] =
+    continue_label_stack[loop_label_top] =
+    break_label_stack  [loop_label_top] = NULL;
+    loop_label_top--;
+  }
 ;
+
 
 
 

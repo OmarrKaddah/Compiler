@@ -1834,6 +1834,17 @@ atomic:
                                                                             $$->is_constant = true;
                                                                             $$->place = strdup(yytext);
                                                                         }
+   | MINUS INT
+{
+    $$ = create_default_value(TYPE_INT);
+    $$->data.i = -$2;
+    $$->is_constant = true;
+
+    char buf[64];
+    snprintf(buf, sizeof(buf), "-%s", yytext);
+    $$->place = strdup(buf);
+}
+
     | FLOAT
                                                                         {
                                                                             $$ =create_default_value(TYPE_FLOAT);
@@ -1843,6 +1854,15 @@ atomic:
                                                                             $$->place = strdup(yytext);
                                                                             
                                                                         }
+    | MINUS FLOAT
+    {
+        $$ = create_default_value(TYPE_FLOAT);
+        $$->data.f = -$2;
+        $$->is_constant = true;
+        char buf[64];
+        snprintf(buf, sizeof(buf), "-%f", $2);  // Format as "-3.14"
+        $$->place = strdup(buf);
+    }
     | STRING
                                                                         {
                                                                             $$ = create_default_value(TYPE_STRING);
@@ -1886,6 +1906,33 @@ atomic:
                                                                             $$->is_constant = false;
                                                                         }
                                                                 
+      | MINUS IDENTIFIER
+    {
+        Symbol* sym = lookup_symbol(current_scope, $2);
+        if (!sym) {
+            yyerror("Undefined variable");
+            YYERROR;
+        }
+        $$ = malloc(sizeof(val));
+        memcpy($$, sym->value, sizeof(val));
+        if ($$->type == TYPE_INT) {
+            $$->data.i = -sym->value->data.i;  // Negate integer
+            char buf[64];
+            snprintf(buf, sizeof(buf), "-%s", $2);  // Format as "-x"
+            $$->place = strdup(buf);
+        }
+        else if ($$->type == TYPE_FLOAT) {
+            $$->data.f = -sym->value->data.f;  // Negate float
+            char buf[64];
+            snprintf(buf, sizeof(buf), "-%s", $2);  // Format as "-y"
+            $$->place = strdup(buf);
+        }
+        else {
+            yyerror("Cannot negate non-numeric identifier");
+            YYERROR;
+        }
+        $$->is_constant = false;
+    }
                                                                    
                                                                     ;
 

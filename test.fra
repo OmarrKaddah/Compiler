@@ -1,12 +1,2 @@
-rakam easy(rakam g,rakam h){
-    rakam X=8;
-    raga3 g;
-    X=5/2;
-    raga3 h;
-}
-rakam l=4;
-rakam f=easy(5,l);
-bool ghalat=false;
-bool h=ghalat==true;
-rakam sah=4;
-rakam q=6 * 2;
+rakam X=-2;
+rakam H=-X;

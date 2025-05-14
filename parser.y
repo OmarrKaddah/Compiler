@@ -418,40 +418,36 @@ statement_list:
     ;
 
 if_statement:
-    IF '(' expression ')' 
+    IF '(' expression ')'
                                                             {
-                                                                if ($3->type != TYPE_BOOL) {
-                                                                    yyerror("Condition in if statement must be boolean");
-                                                                    YYERROR;
-                                                                }
-
-                                                                $3->falseLabel = new_label();  // else or end label
-                                                                $3->endLabel = new_label();    // label after whole if-else
-
-                                                                // Generate conditional jump to false label
+                                                                if ($3->type != TYPE_BOOL) { yyerror("Condition in if statement must be boolean"); YYERROR; }
+                                                                $3->falseLabel = new_label();
                                                                 add_quad("JMP_FALSE", $3->place, "", $3->falseLabel);
-
-                                                                // Optional: print condition result for debugging
-                                                                if ($3->data.b)
-                                                                    printf("Condition is true\n");
-                                                                else
-                                                                    printf("Condition is false\n");
                                                             }
     block_statement
                                                             {
-                                                                // After true block, jump over else
+                                                                add_quad("LABEL", $3->falseLabel, "", "");
+                                                                free_val($3);
+                                                            }
+  | IF '(' expression ')'
+                                                            {
+                                                                if ($3->type != TYPE_BOOL) { yyerror("Condition in if statement must be boolean"); YYERROR; }
+                                                                $3->falseLabel = new_label();
+                                                                $3->endLabel   = new_label();
+                                                                add_quad("JMP_FALSE", $3->place, "", $3->falseLabel);
+                                                            }
+    block_statement
+                                                            {
                                                                 add_quad("JMP", "", "", $3->endLabel);
-
-                                                                // Mark start of else block
                                                                 add_quad("LABEL", $3->falseLabel, "", "");
                                                             }
     ELSE block_statement
                                                             {
-                                                                // End label for if-else
                                                                 add_quad("LABEL", $3->endLabel, "", "");
                                                                 free_val($3);
                                                             }
 ;
+
 
 
 
@@ -582,65 +578,63 @@ for_statement:
 
 
 switch_statement:
-    SWITCH '(' expression ')'
+    SWITCH '(' expression ')' 
                                                             {
-                                                                    if ($3->type != TYPE_INT && $3->type != TYPE_STRING) {
-                                                                        yyerror("Switch expression must be int or string");
-                                                                        YYERROR;
-                                                                    }
-                                                                    current_switch_type = $3->type;
-                                                                    current_switch_place = strdup($3->place);
-                                                                    current_switch_endLabel = new_label();
-
-                                                                    free_val($3);
+                                                                if ($3->type != TYPE_INT && $3->type != TYPE_STRING) {
+                                                                    yyerror("Switch expression must be int or string");
+                                                                    YYERROR;
                                                                 }
-                                                                '{'
-                                                                case_list
-                                                                '}'
-                                                                {
-                                                                    // end of switch
-                                                                    add_quad("LABEL", current_switch_endLabel, "", "");
-                                                                    free(current_switch_place);
-                                                                    current_switch_place = NULL;
-                                                                    current_switch_endLabel = NULL;
-                                                                }
+                                                                current_switch_type   = $3->type;
+                                                                current_switch_place  = strdup($3->place);
+                                                                current_switch_endLabel = new_label();
+                                                                free_val($3);
+                                                            }
+  '{'
+    case_list
+  '}'
+                                                            {
+                                                                add_quad("LABEL", current_switch_endLabel, "", "");
+                                                                free(current_switch_place);
+                                                                current_switch_place = NULL;
+                                                                current_switch_endLabel = NULL;
+                                                            }
   ;
 
 case_list:
-    /* empty */
+    /* no cases */
   | case_list case_statement
   ;
 
 case_statement:
-    CASE expression ':' statement
-                                                                {
-                                                                    if ($2->type != current_switch_type) {
-                                                                        yyerror("Case expression type mismatch");
-                                                                        YYERROR;
-                                                                    }
-
-                                                                    // compare and jump into case body
-                                                                    char *cmpTemp  = new_temp();
-                                                                    char *caseLabel = new_label();
-                                                                    char *skipLabel = new_label();
-
-                                                                    add_quad("CMP", current_switch_place, $2->place, cmpTemp);
-                                                                    add_quad("JMP_TRUE", cmpTemp, "", caseLabel);
-                                                                    add_quad("JMP", "", "", skipLabel);
-
-                                                                    // emit case body
-                                                                    add_quad("LABEL", caseLabel, "", "");
-                                                                    /* <statement> already emitted its own quads here */
-
-                                                                    // jump to end-of-switch
-                                                                    add_quad("JMP", "", "", current_switch_endLabel);
-
-                                                                    // skip this case
-                                                                    add_quad("LABEL", skipLabel, "", "");
-
-                                                                    free_val($2);
+    CASE expression ':' 
+                                                            {
+                                                                if ($2->type != current_switch_type) {
+                                                                    yyerror("Case expression type mismatch");
+                                                                    YYERROR;
                                                                 }
+
+                                                                /* Compute compare + conditional jump into the case body */
+                                                                char *cmpTemp   = new_temp();
+                                                                char *caseLabel = new_label();
+                                                                char *skipLabel = new_label();
+
+                                                                add_quad("CMP",       current_switch_place, $2->place, cmpTemp);
+                                                                add_quad("JMP_TRUE",  cmpTemp,             "",          caseLabel);
+                                                                add_quad("JMP",       "",                  "",          skipLabel);
+
+                                                                /* Mark the start of the case body */
+                                                                add_quad("LABEL",     caseLabel,           "",          "");
+                                                            }
+    block_statement
+                                                            {
+                                                                /* After body, jump to end-of-switch; then emit skip label */
+                                                                add_quad("JMP",       "",                  "",          current_switch_endLabel);
+                                                                add_quad("LABEL",     skipLabel,           "",          "");
+
+                                                                free_val($2);
+                                                            }
   ;
+
 
 
 declaration:

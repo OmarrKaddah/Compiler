@@ -885,24 +885,24 @@ return_statement:
 
 break_statement:
 BREAK
-    {
-        if (loop_var_top < 0 || break_label_stack[loop_var_top] == NULL) {
-            yyerror("Break used outside loop");
-            YYERROR;
-        }
-        add_quad("BRK", "", "", break_label_stack[loop_var_top]);
-    }
+                                                                        {
+                                                                            if (loop_var_top < 0 || break_label_stack[loop_var_top] == NULL) {
+                                                                                yyerror("Break used outside loop");
+                                                                                YYERROR;
+                                                                            }
+                                                                            add_quad("BRK", "", "", break_label_stack[loop_var_top]);
+                                                                        }
     ;
 
 continue_statement:
     CONTINUE
-    {
-        if (loop_var_top < 0 || continue_label_stack[loop_var_top] == NULL) {
-            yyerror("Continue used outside loop");
-            YYERROR;
-        }
-        add_quad("CONT", "", "", continue_label_stack[loop_var_top]);
-    }
+                                                                        {
+                                                                            if (loop_var_top < 0 || continue_label_stack[loop_var_top] == NULL) {
+                                                                                yyerror("Continue used outside loop");
+                                                                                YYERROR;
+                                                                            }
+                                                                            add_quad("CONT", "", "", continue_label_stack[loop_var_top]);
+                                                                        }
 ;
 
 
@@ -934,9 +934,9 @@ print_statement:
 
 expression:
     atomic
-    | function_call {
-        $$ = $1;
-    }
+                                                                        | function_call {
+                                                                            $$ = $1;
+                                                                        }
     | expression PLUS expression %prec PLUS
                                                                       
                                                                     {

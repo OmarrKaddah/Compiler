@@ -1401,6 +1401,15 @@ atomic:
                                                                             if ($$->type == TYPE_STRING) {
                                                                                 $$->data.s = strdup(sym->value->data.s);
                                                                             }
+                                                                            else if ($$->type == TYPE_BOOL) {
+                                                                                $$->data.b = sym->value->data.b;
+                                                                            }
+                                                                            else if ($$->type == TYPE_INT) {
+                                                                                $$->data.i = sym->value->data.i;
+                                                                            }
+                                                                            else if ($$->type == TYPE_FLOAT) {
+                                                                                $$->data.f = sym->value->data.f;
+                                                                            }
                                                                             $$->place = strdup($1);
                                                                             $$->is_constant = false;
                                                                         }

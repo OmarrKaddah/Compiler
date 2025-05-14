@@ -1,6 +1,6 @@
 ekhtar(5){
-    7ala 2+3: rakam x;
-    7ala 4: rakam h;
+    7ala 2+3: etba3(5);
+    7ala 4: etba3(4);
 }
 
 faragh print_hello() {

@@ -1,5 +1,4 @@
 faragh add(rakam a, rakam b) {
-    etba3(a + b);
-}
 
-add(3, 4);
+ raga3 4;
+}

@@ -1,0 +1,6 @@
+rakam a = 5; 
+rakam b = 3; 
+etba3(a & b); 
+etba3(a | b); 
+etba3(a ^ b); 
+

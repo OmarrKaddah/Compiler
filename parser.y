@@ -19,6 +19,9 @@
     char *cmpTemp   = NULL;
     char *caseLabel = NULL;
     char *skipLabel = NULL;
+    char* break_label_stack[MAX_NESTED_LOOPS];
+    char* continue_label_stack[MAX_NESTED_LOOPS];
+
 
 
         // counters for temps & labels
@@ -477,58 +480,85 @@ while_statement:
                                                                     YYERROR;
                                                                 }
 
-                                                                // Label for the beginning of the loop condition check
-                                                                $3->falseLabel = new_label();  // loop start
-                                                                $3->endLabel = new_label();    // loop exit
+                                                                $3->falseLabel = new_label();  // Loop condition
+                                                                $3->endLabel   = new_label();  // Loop exit
 
-                                                                // Emit loop start label
+                                                                // Push break/continue labels (no loop var needed)
+                                                                if (loop_var_top + 1 < MAX_NESTED_LOOPS) {
+                                                                    loop_var_top++;
+                                                                    break_label_stack[loop_var_top] = $3->endLabel;
+                                                                    continue_label_stack[loop_var_top] = $3->falseLabel;
+                                                                } else {
+                                                                    yyerror("Too many nested loops");
+                                                                    YYERROR;
+                                                                }
+
                                                                 add_quad("LABEL", $3->falseLabel, "", "");
-
-                                                                // Evaluate condition; jump if false
                                                                 add_quad("JMP_FALSE", $3->place, "", $3->endLabel);
-
-                                                                // Optional debug
-                                                                if ($3->data.b)
-                                                                    printf("Condition is true\n");
-                                                                else
-                                                                    printf("Condition is false\n");
                                                             }
     block_statement
                                                             {
-                                                                // After the loop body, jump back to condition check
                                                                 add_quad("JMP", "", "", $3->falseLabel);
-
-                                                                // Loop exit
                                                                 add_quad("LABEL", $3->endLabel, "", "");
+
+                                                                break_label_stack[loop_var_top] = NULL;
+                                                                continue_label_stack[loop_var_top] = NULL;
+                                                                loop_var_top--;
+
                                                                 free_val($3);
                                                             }
 ;
 
 
 
+
 do_while_statement:
     DO
                                                             {
-                                                                
+                                                                if (loop_var_top + 1 >= MAX_NESTED_LOOPS) {
+                                                                    yyerror("Too many nested loops");
+                                                                    YYERROR;
+                                                                }
+
+                                                                // Reserve a label for the loop start
                                                                 do_while_label = new_label();
+
+                                                                // Push break/continue labels for this loop
+                                                                loop_var_top++;
+                                                                break_label_stack[loop_var_top] = new_label();           // Exit after loop
+                                                                continue_label_stack[loop_var_top] = do_while_label;     // Start of loop condition check
+
+                                                                // Emit start label
                                                                 add_quad("LABEL", do_while_label, "", "");
                                                             }
     block_statement
+
     WHILE '(' expression ')'
                                                             {
                                                                 if ($6->type != TYPE_BOOL) {
                                                                     yyerror("Condition in do-while statement must be boolean");
                                                                     YYERROR;
                                                                 }
+
                                                                 if ($6->data.b)
                                                                     printf("Condition is true\n");
                                                                 else
                                                                     printf("Condition is false\n");
+
+                                                                // Jump to start if condition is true
                                                                 add_quad("JMP_TRUE", $6->place, "", do_while_label);
+
+                                                                // Emit loop exit label
+                                                                add_quad("LABEL", break_label_stack[loop_var_top], "", "");
+
+                                                                // Cleanup
                                                                 free_val($6);
-                                                                
+                                                                break_label_stack[loop_var_top] = NULL;
+                                                                continue_label_stack[loop_var_top] = NULL;
+                                                                loop_var_top--;
                                                             }
 ;
+
 
 
 
@@ -557,7 +587,8 @@ for_statement:
                                                                 
                                                                 for_loop_false_label = new_label(); // condition label
                                                                 for_loop_end_label = new_label();   // loop exit
-
+                                                                break_label_stack[loop_var_top] = for_loop_end_label;
+                                                                continue_label_stack[loop_var_top] = for_loop_false_label;
                                                                 // Emit label before evaluating condition
                                                                 add_quad("LABEL", for_loop_false_label, "", "");
 
@@ -578,7 +609,9 @@ for_statement:
 
                                                                 add_quad("JMP", "", "", for_loop_false_label);          // Go back to condition
                                                                 add_quad("LABEL", for_loop_end_label, "", "");          // End of loop
-
+                                                                // Emit loop exit label
+                                                                // End of loop
+                                                               
                                                                 // Cleanup
                                                                 free_val($5);
                                                                 free_val($9);
@@ -586,6 +619,9 @@ for_statement:
 
                                                                 free(loop_variable_stack[loop_var_top]);
                                                                 loop_variable_stack[loop_var_top] = NULL;
+                                                                break_label_stack[loop_var_top] = NULL;
+                                                                continue_label_stack[loop_var_top] = NULL;
+            
                                                                 loop_var_top--;
                                                             }
     
@@ -759,12 +795,27 @@ return_statement:
 
 
 break_statement:
-    BREAK 
+BREAK
+    {
+        if (loop_var_top < 0 || break_label_stack[loop_var_top] == NULL) {
+            yyerror("Break used outside loop");
+            YYERROR;
+        }
+        add_quad("JMP", "", "", break_label_stack[loop_var_top]);
+    }
     ;
 
 continue_statement:
-    CONTINUE 
-    ;
+    CONTINUE
+    {
+        if (loop_var_top < 0 || continue_label_stack[loop_var_top] == NULL) {
+            yyerror("Continue used outside loop");
+            YYERROR;
+        }
+        add_quad("JMP", "", "", continue_label_stack[loop_var_top]);
+    }
+;
+
 
 print_statement:
     PRINT '(' expression ')'                                             

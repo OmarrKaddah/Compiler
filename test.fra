@@ -1,1 +1,5 @@
-rakam x=3+5+2;
+rakam i = 0;
+rakam easy(rakam h){}
+
+rakam x = 5;
+easy();

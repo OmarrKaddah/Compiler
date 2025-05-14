@@ -7,6 +7,15 @@
     #include "quadruples.h"
 
 
+
+    #define MAX_NESTED_LOOPS 16
+    char* loop_variable_stack[MAX_NESTED_LOOPS];
+    int loop_var_top = -1;
+    char* current_switch_place   = NULL;  // the “scrutinee” variable/place
+    char* current_switch_endLabel = NULL; // label to jump to after the switch
+
+
+
         // counters for temps & labels
     static int _temp_cnt = 0;
     static char *new_temp();
@@ -63,7 +72,7 @@
 %token <f> FLOAT
 %token <s> STRING IDENTIFIER
 %token <b> BOOL
-%type <v> expression atomic function_call
+%type <v> expression atomic function_call do_while_statement for_statement switch_statement
 %type <s> assignment_statement print_statement 
 %type <i> type_specifier
 %type <p> argument_list
@@ -340,6 +349,11 @@ assignment_statement:
                                                     break;
                                                 case TYPE_BOOL: sym->value->data.b = $3->data.b; break;
                                             }
+                                            if (loop_var_top + 1 < MAX_NESTED_LOOPS && loop_variable_stack[loop_var_top] == NULL) {
+                                                loop_var_top++;
+                                                loop_variable_stack[loop_var_top] = strdup($1);  // push variable name
+                                            }
+
                                             add_quad("ASSIGN",$3->place,"",$1);
                                             free_val($3);
                                         }
@@ -404,151 +418,235 @@ statement_list:
     ;
 
 if_statement:
-    IF '(' expression ')' block_statement
+    IF '(' expression ')' 
                                                             {
                                                                 if ($3->type != TYPE_BOOL) {
                                                                     yyerror("Condition in if statement must be boolean");
                                                                     YYERROR;
                                                                 }
-                                                                if ($3->data.b )
-                                                                {
-                                                                    printf("Condition is true");
-                                                                }
-                                                                free($3);
-                                                            }
-    | IF '(' expression ')' block_statement ELSE block_statement
-                                                            {
-                                                                if ($3->type != TYPE_BOOL) {
-                                                                    yyerror("Condition in if statement must be boolean");
-                                                                    YYERROR;
-                                                                }
-                                                                if ($3->data.b==true )
-                                                                {
-                                                                    printf("Condition is true");
-                                                                }
+
+                                                                $3->falseLabel = new_label();  // else or end label
+                                                                $3->endLabel = new_label();    // label after whole if-else
+
+                                                                // Generate conditional jump to false label
+                                                                add_quad("JMP_FALSE", $3->place, "", $3->falseLabel);
+
+                                                                // Optional: print condition result for debugging
+                                                                if ($3->data.b)
+                                                                    printf("Condition is true\n");
                                                                 else
-                                                                {
-                                                                    printf("Condition is false");
-                                                                }
-                                                                free($3);
+                                                                    printf("Condition is false\n");
                                                             }
-    ;
+    block_statement
+                                                            {
+                                                                // After true block, jump over else
+                                                                add_quad("JMP", "", "", $3->endLabel);
+
+                                                                // Mark start of else block
+                                                                add_quad("LABEL", $3->falseLabel, "", "");
+                                                            }
+    ELSE block_statement
+                                                            {
+                                                                // End label for if-else
+                                                                add_quad("LABEL", $3->endLabel, "", "");
+                                                                free_val($3);
+                                                            }
+;
+
+
+
 
 while_statement:
-    WHILE '(' expression ')' block_statement
+    WHILE '(' expression ')' 
                                                             {
                                                                 if ($3->type != TYPE_BOOL) {
                                                                     yyerror("Condition in while statement must be boolean");
                                                                     YYERROR;
                                                                 }
-                                                                if ($3->data.b ==true)
-                                                                {
-                                                                    printf("Condition is true");
-                                                                }
+
+                                                                // Label for the beginning of the loop condition check
+                                                                $3->falseLabel = new_label();  // loop start
+                                                                $3->endLabel = new_label();    // loop exit
+
+                                                                // Emit loop start label
+                                                                add_quad("LABEL", $3->falseLabel, "", "");
+
+                                                                // Evaluate condition; jump if false
+                                                                add_quad("JMP_FALSE", $3->place, "", $3->endLabel);
+
+                                                                // Optional debug
+                                                                if ($3->data.b)
+                                                                    printf("Condition is true\n");
                                                                 else
-                                                                {
-                                                                    printf("Condition is false");
-                                                                }
-                                                                free($3);
+                                                                    printf("Condition is false\n");
                                                             }
-    ;
+    block_statement
+                                                            {
+                                                                // After the loop body, jump back to condition check
+                                                                add_quad("JMP", "", "", $3->falseLabel);
+
+                                                                // Loop exit
+                                                                add_quad("LABEL", $3->endLabel, "", "");
+                                                                free_val($3);
+                                                            }
+;
+
+
 
 do_while_statement:
-    DO block_statement WHILE '(' expression ')' 
+    DO 
+                                                            {
+                                                                // Allocate val to carry loop start label
+                                                                $$ = create_default_value(TYPE_BOOL);   // dummy type
+                                                                $$->falseLabel = new_label();           // loop start
+                                                                add_quad("LABEL", $$->falseLabel, "", "");
+                                                            }
+    block_statement 
+    WHILE '(' expression ')' 
                                                             {
                                                                 if ($5->type != TYPE_BOOL) {
                                                                     yyerror("Condition in do-while statement must be boolean");
                                                                     YYERROR;
                                                                 }
-                                                                if ($5->data.b==true )
-                                                                {
-                                                                    printf("Condition is true");
-                                                                }
+
+                                                                // Optional debug printing
+                                                                if ($5->data.b)
+                                                                    printf("Condition is true\n");
                                                                 else
-                                                                {
-                                                                    printf("Condition is false");
-                                                                }
-                                                                free($5);
+                                                                    printf("Condition is false\n");
+
+                                                                // Loop back to start if condition is true
+                                                                add_quad("JMP_TRUE", $5->place, "", $2->falseLabel);
+
+                                                                free_val($5);
+                                                                free_val($2);
                                                             }
-    ;
+                                                        ;
+
 
 for_statement:
-    FOR '(' assignment_statement ';' expression ';' STEP EQUAL atomic ')' block_statement     {
-                                                                if ($5->type != TYPE_BOOL)
-                                                                 {
-                                                                    yyerror("Condition in for statement must be boolean");
-                                                                    YYERROR;
-                                                                }
-                                                                if ($5->data.b==true )
-                                                                {
-                                                                    printf("Condition is true");
-                                                                }
-                                                                else
-                                                                {
-                                                                    printf("Condition is false");
-                                                                }
-                                                                free($5);
-                                                                if ($9->type != TYPE_INT)
-                                                                 {
-                                                                    yyerror("Step value in for statement must be int");
-                                                                    YYERROR;
-                                                                }
-
-
-                                                            }
-    | FOR '(' declaration ';' expression ';' STEP EQUAL atomic ')' block_statement
+    FOR '(' assignment_statement ';' expression ';' STEP EQUAL atomic ')' 
                                                             {
-                                                                if ($5->type != TYPE_BOOL)
-                                                                 {
+                                                                if ($5->type != TYPE_BOOL) {
                                                                     yyerror("Condition in for statement must be boolean");
                                                                     YYERROR;
                                                                 }
-                                                                if ($5->data.b==true )
-                                                                {
-                                                                    printf("Condition is true");
-                                                                }
-                                                                else
-                                                                {
-                                                                    printf("Condition is false");
-                                                                }
-                                                                free($5);
-                                                                if ($9->type != TYPE_INT)
-                                                                 {
-                                                                    yyerror("Step value in for statement must be int");
+                                                                if ($9->type != TYPE_INT) {
+                                                                    yyerror("Step value must be int");
                                                                     YYERROR;
                                                                 }
 
+                                                                // Push loop variable if not already pushed
+                                                                if (loop_var_top + 1 < MAX_NESTED_LOOPS) {
+                                                                    loop_var_top++;
+                                                                    loop_variable_stack[loop_var_top] = strdup(last_symbol_inserted->name);  // Capture variable name
+                                                                } else {
+                                                                    yyerror("Too many nested loops");
+                                                                    YYERROR;
+                                                                }
+
+                                                                // Create a dummy val* to carry labels
+                                                                $$ = create_default_value(TYPE_BOOL);
+                                                                $$->falseLabel = new_label(); // condition label
+                                                                $$->endLabel = new_label();   // loop exit
+
+                                                                // Emit label before evaluating condition
+                                                                add_quad("LABEL", $$->falseLabel, "", "");
+
+                                                                // Check condition
+                                                                add_quad("JMP_FALSE", $5->place, "", $$->endLabel);
+
+                                                                // Optional debug
+                                                                if ($5->data.b) printf("Condition is true\n");
+                                                                else            printf("Condition is false\n");
                                                             }
+    block_statement
+                                                            {
+                                                                char *loopVar = loop_variable_stack[loop_var_top];  // Use top of the loop variable stack
+
+                                                                char *stepTemp = new_temp();
+                                                                add_quad("ADD", loopVar, $9->place, stepTemp);       // stepTemp = loopVar + step
+                                                                add_quad("ASSIGN", stepTemp, "", loopVar);           // loopVar = stepTemp
+
+                                                                add_quad("JMP", "", "", $<v>2->falseLabel);          // Go back to condition
+                                                                add_quad("LABEL", $<v>2->endLabel, "", "");          // End of loop
+
+                                                                // Cleanup
+                                                                free_val($5);
+                                                                free_val($9);
+                                                                free_val($2);
+
+                                                                free(loop_variable_stack[loop_var_top]);
+                                                                loop_variable_stack[loop_var_top] = NULL;
+                                                                loop_var_top--;
+                                                            }
+    
     ;
+
+
+
 
 switch_statement:
-    SWITCH '(' expression ')' 
+    SWITCH '(' expression ')'
                                                             {
-                                                                if ($3->type != TYPE_INT && $3->type != TYPE_STRING) {
-                                                                    yyerror("Switch expression must be of type int or string");
-                                                                    YYERROR;
+                                                                    if ($3->type != TYPE_INT && $3->type != TYPE_STRING) {
+                                                                        yyerror("Switch expression must be int or string");
+                                                                        YYERROR;
+                                                                    }
+                                                                    current_switch_type = $3->type;
+                                                                    current_switch_place = strdup($3->place);
+                                                                    current_switch_endLabel = new_label();
+
+                                                                    free_val($3);
                                                                 }
-                                                                current_switch_type = $3->type;
-                                                                free($3);
-                                                            }
-    '{' case_list '}'
-    ;
+                                                                '{'
+                                                                case_list
+                                                                '}'
+                                                                {
+                                                                    // end of switch
+                                                                    add_quad("LABEL", current_switch_endLabel, "", "");
+                                                                    free(current_switch_place);
+                                                                    current_switch_place = NULL;
+                                                                    current_switch_endLabel = NULL;
+                                                                }
+  ;
 
 case_list:
     /* empty */
-    | case_list case_statement
-    ;
+  | case_list case_statement
+  ;
 
 case_statement:
-    CASE expression ':' statement 
-                                                            {
-                                                                if ($2->type != current_switch_type) {
-                                                                    yyerror("Case expression type does not match switch expression type");
-                                                                    YYERROR;
+    CASE expression ':' statement
+                                                                {
+                                                                    if ($2->type != current_switch_type) {
+                                                                        yyerror("Case expression type mismatch");
+                                                                        YYERROR;
+                                                                    }
+
+                                                                    // compare and jump into case body
+                                                                    char *cmpTemp  = new_temp();
+                                                                    char *caseLabel = new_label();
+                                                                    char *skipLabel = new_label();
+
+                                                                    add_quad("CMP", current_switch_place, $2->place, cmpTemp);
+                                                                    add_quad("JMP_TRUE", cmpTemp, "", caseLabel);
+                                                                    add_quad("JMP", "", "", skipLabel);
+
+                                                                    // emit case body
+                                                                    add_quad("LABEL", caseLabel, "", "");
+                                                                    /* <statement> already emitted its own quads here */
+
+                                                                    // jump to end-of-switch
+                                                                    add_quad("JMP", "", "", current_switch_endLabel);
+
+                                                                    // skip this case
+                                                                    add_quad("LABEL", skipLabel, "", "");
+
+                                                                    free_val($2);
                                                                 }
-                                                                free($2);
-                                                            }
-    ;
+  ;
+
 
 declaration:
     type_specifier IDENTIFIER
@@ -679,7 +777,7 @@ print_statement:
                                                                               default:
                                                                                   yyerror("Unknown type in print statement");
                                                                           }
-
+                                                                            add_quad("CALL",$1,"",""); // Call the print function
                                                                           // Free the allocated val structure
                                                                           free($3);
                                                                       }

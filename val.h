@@ -30,6 +30,8 @@ typedef struct
     } data;
 
     char *place;
+    char *falseLabel;
+    char *endLabel;
 
     bool is_constant;
 

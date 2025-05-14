@@ -801,7 +801,7 @@ BREAK
             yyerror("Break used outside loop");
             YYERROR;
         }
-        add_quad("JMP", "", "", break_label_stack[loop_var_top]);
+        add_quad("BRK", "", "", break_label_stack[loop_var_top]);
     }
     ;
 
@@ -812,7 +812,7 @@ continue_statement:
             yyerror("Continue used outside loop");
             YYERROR;
         }
-        add_quad("JMP", "", "", continue_label_stack[loop_var_top]);
+        add_quad("CONT", "", "", continue_label_stack[loop_var_top]);
     }
 ;
 
